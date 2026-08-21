@@ -11,7 +11,7 @@
   <a href="https://ko-fi.com/0xwhitemage" target="_blank"><img src="https://img.shields.io/badge/Kofi-Buy_me_a_coffee-1A9642?style=for-the-badge&logo=buymeacoffee&logoColor=white" alt="Ko-fi"></a>
 </p>
 
-Run **[Qwen3.8-27B](https://huggingface.co/RadixArk/Qwen3.8-27B-NVFP4)** paired with the **[Kearuga DFlash 2 Drafter](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3)** on **[SGLang](https://docs.sglang.io)** on a single 128 GB NVIDIA DGX Spark (GB10). This repository provides production container builds, hardware launchers, kernel overlays, multi-domain distillation engines, and automated quality benchmarks.
+Run **[Qwen3.8-27B-Kearuga-NVFP4](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4)** paired with the **[Kearuga DFlash 2 Drafter](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3)** on **[SGLang](https://docs.sglang.io)** on a single 128 GB NVIDIA DGX Spark (GB10). This repository provides production container builds, hardware launchers, kernel overlays, multi-domain distillation engines, and automated quality benchmarks.
 
 * ⚡ **DFlash 2 (Daily Driver)**: Ultra-responsive C1–C4 profile (~65–82 tok/s net C1, ~120–145 tok/s C4) with full reasoning & tool calling.
 * 🦅 **EAGLE 3/1/4 (Agent Swarms)**: 32-seat high-concurrency profile for agent pipelines (~535 tok/s at C32).
@@ -169,7 +169,7 @@ python3 bench/scale.py --widths 4
 
 | Parameter | Recommended Value | Description |
 |---|---|---|
-| `TARGET_MODEL` | `RadixArk/Qwen3.8-27B-NVFP4` | Full 2,194-tensor target model (or local host path) |
+| `TARGET_MODEL` | `0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4` | Full 2,194-tensor NVFP4 target model (or local host path) |
 | `DFLASH_MODEL` | `0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3` | Retrained RLVR-aligned FP8 draft model (or local path) |
 | `CONTEXT_LENGTH` | `262144` | Full native 262K context window |
 | `MAX_TOTAL_TOKENS` | `1048576` | Shared FP8 KV pool capacity |
