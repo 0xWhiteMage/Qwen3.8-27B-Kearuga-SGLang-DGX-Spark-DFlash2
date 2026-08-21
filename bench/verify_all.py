@@ -86,7 +86,9 @@ if manifest.exists():
                 mismatches.append(f"Missing {rel_path}")
                 continue
             with open(target_file, "rb") as tf:
-                actual_hash = hashlib.sha256(tf.read()).hexdigest()
+                # Normalize CRLF to LF for cross-platform bit-exact validation
+                raw_bytes = tf.read().replace(b"\r\n", b"\n")
+                actual_hash = hashlib.sha256(raw_bytes).hexdigest()
             if actual_hash != expected_hash:
                 manifest_ok = False
                 mismatches.append(f"Mismatch in {rel_path}")

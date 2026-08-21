@@ -1,0 +1,8 @@
+# Enforce LF line endings for all code, shell scripts, and manifests
+* text=auto eol=lf
+*.py text eol=lf
+*.sh text eol=lf
+*.json text eol=lf
+*.jsonl text eol=lf
+*.md text eol=lf
+MANIFEST.sha256 text eol=lf
