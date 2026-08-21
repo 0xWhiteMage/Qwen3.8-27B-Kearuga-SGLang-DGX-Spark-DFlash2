@@ -29,7 +29,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 * 🌟 **v0.4.0 Release Highlights**:
   * 🧠 **RLVR & GRPO 27B Reasoning Upgrade**: Post-trained across 1,500 verifiable problems in Math Olympiad, Python Algorithms, Logic, and Tool Calling, pushing **GSM8K to 96.9%** (+4.5%) and **HumanEval to 92.7%** (+6.5%).
   * ⏱️ **Anti-Overthinking Soft Length Penalty**: Integrated length-penalized RLVR to eliminate runaway recursive loops, slashing mean thinking tokens by **81.6%** (~890 tokens).
-  * 🏎️ **Retrained DFlash 2 Drafter (`cd1f23d4...`)**: Aligned 5-layer sliding attention student on the new RLVR trajectories, boosting projected speculative acceptance rate ($lpha$) to **~94.5%**.
+  * 🏎️ **Retrained DFlash 2 Drafter (`cd1f23d4...`)**: Aligned 5-layer sliding attention student on the new RLVR trajectories, boosting projected speculative acceptance rate ($\alpha$) to **~94.5%**.
   * 🎛️ **Reasoning Effort Controls & Stochastic Calibration**: Standardized default `REASONING_EFFORT=medium`, `TEMPERATURE=0.6`, and `TOP_P=0.95` across launchers and benchmark suites.
   * 🛡️ **Cross-Platform Manifest Hardening**: Enforced bit-exact Linux LF line endings via `.gitattributes` to guarantee 100% cross-platform parity.
 
@@ -78,7 +78,6 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 ```
 
 ---
-
 
 ### ⚖️ 4. Checkpoint Head-to-Head Fidelity (vs. Original Base BF16)
 
@@ -129,6 +128,9 @@ bash patch/build-dflash2-image.sh
 # (Or launch EAGLE high-concurrency profile)
 # ./start-eagle.sh
 ```
+
+> [!TIP]
+> **Local Path Support**: You can set `TARGET_MODEL` or `DFLASH_MODEL` in `.env` to an absolute host directory (e.g. `/workspace/models/...` or `/volume2/...`). The launcher automatically detects and bind-mounts the directory into Docker.
 
 ### 3. Check Server Health
 ```bash
@@ -197,6 +199,7 @@ We gratefully acknowledge the researchers, engineers, and creators whose open-so
 * ⚡ **[z-lab/dflash](https://github.com/z-lab/dflash)**: For inventing the revolutionary block-diffusion speculative decoding architecture.
 * 🎯 **[RadixArk/Qwen3.8-27B-NVFP4](https://huggingface.co/RadixArk/Qwen3.8-27B-NVFP4)**: For the calibrated base NVFP4 target weights.
 * 🌐 **[SGLang Project](https://github.com/sgl-project/sglang)**: For the high-throughput inference engine, radix attention, and speculative decoding framework.
+* 🌟 **[huggingface/open-r1](https://github.com/huggingface/open-r1)** & **[hkust-nlp/simpleRL-reason](https://github.com/hkust-nlp/simpleRL-reason)**: For open-source GRPO/RLVR post-training recipes and verifiable reward methods.
 
 ---
 
