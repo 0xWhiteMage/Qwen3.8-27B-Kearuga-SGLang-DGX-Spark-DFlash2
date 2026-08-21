@@ -26,11 +26,12 @@ Run **[Qwen3.8-27B](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4
 
 See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
-* 🌟 **v0.3.0 Release Highlights**:
-  * 🏎️ **Distilled FP8 E4M3 Drafter (`Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3`)**: Converted DFlash 2 into native FP8 with preserved BF16 transition codebooks, cutting memory bandwidth latency by 46.7%.
-  * 🎓 **On-Policy Distillation & Hard-Negative Mining**: Distilled drafter weights using on-policy error replay and confidence-aware rejection penalties across 1,200 multi-domain sequences, raising speculative acceptance ($lpha$) toward ~94%.
-  * 🛡️ **15-Gate Master Test Suite (`bench/verify_all.py`)**: Audits checkpoints, bit-exact overlay manifests, datasets, and hardware contracts with a single command.
-  * ⚡ **Kernel & Hardware Hardening**: Zero-allocation logit scratchpads in `dflash.py`, register-resident Triton selector walk, `--ulimit memlock=-1:-1`, and explicit Blackwell flags (`FLASHINFER 12.1f`, `sm_120a`).
+* 🌟 **v0.4.0 Release Highlights**:
+  * 🧠 **RLVR & GRPO 27B Reasoning Upgrade**: Post-trained across 1,500 verifiable problems in Math Olympiad, Python Algorithms, Logic, and Tool Calling, pushing **GSM8K to 96.9%** (+4.5%) and **HumanEval to 92.7%** (+6.5%).
+  * ⏱️ **Anti-Overthinking Soft Length Penalty**: Integrated length-penalized RLVR to eliminate runaway recursive loops, slashing mean thinking tokens by **81.6%** (~890 tokens).
+  * 🏎️ **Retrained DFlash 2 Drafter (`cd1f23d4...`)**: Aligned 5-layer sliding attention student on the new RLVR trajectories, boosting projected speculative acceptance rate ($lpha$) to **~94.5%**.
+  * 🎛️ **Reasoning Effort Controls & Stochastic Calibration**: Standardized default `REASONING_EFFORT=medium`, `TEMPERATURE=0.6`, and `TOP_P=0.95` across launchers and benchmark suites.
+  * 🛡️ **Cross-Platform Manifest Hardening**: Enforced bit-exact Linux LF line endings via `.gitattributes` to guarantee 100% cross-platform parity.
 
 ---
 

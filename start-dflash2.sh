@@ -10,7 +10,7 @@ set -euo pipefail
 #   2. Ensure .env is present (use .env.sample as template).
 #
 # Notes:
-#   - Uses DFlash 2 speculative decoding (z-lab/Qwen3.8-27B-DFlash2 @ 50307d4).
+#   - Uses DFlash 2 speculative decoding (0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3 @ cd1f23d4).
 #   - Requires the DFlash 2 overlay image: lmsysorg/sglang:qwen38-27b-dflash2
 #   - Do NOT enable torch.compile or continuous-decode-steps > 1 on DFlash 2
 #     (measured to crawl to 3–6 tok/s on this build).
