@@ -20,7 +20,7 @@
 ```
 
 * **Target Model**: `0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4` (Pinned commit `8ea86bdcdd34c84b3d25b69fb7fcc8fc48d0cdd0`)
-* **DFlash 2 Draft**: `0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3` (Pinned commit `cd1f23d4ff625ac68ac08457331547e2edab3991`)
+* **DFlash 2 Draft**: `0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2` (Pinned commit `0bda4e3e32bb768f6f7c2db0a6fa2c25752644b1`)
 * **EAGLE 3/1/4**: In-checkpoint MTP draft head for C8–C32 high concurrency
 * **Shared Memory Contract**: 1,048,576 FP8 KV cache pool (~32 GiB KV), native 262,144 tokens context per request, 4 admitted DFlash streams, 32 admitted EAGLE streams.
 
@@ -98,7 +98,7 @@ python3 bench/scale.py --widths 4
 Reduces draft model memory traffic from 3.2 GB to 1.6 GB, cutting unified memory bus latency by ~45%:
 ```bash
 python3 tools/convert_dflash_fp8.py \
-    --input-model 0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3 \
+    --input-model 0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2 \
     --output-dir ./models/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3
 ```
 

@@ -35,7 +35,7 @@ Kearuga achieves this on a **single 128 GB NVIDIA DGX Spark (GB10)** by pairing 
 │ ⚡ DFlash 2 Profile (Interactive C1–C4)      │ 🦅 EAGLE Profile (Agent Swarms C8–C32)      │
 ├─────────────────────────────────────────────┼─────────────────────────────────────────────┤
 │ • Block-diffusion parallel drafting (O(1))  │ • Tree-structured autoregressive draft      │
-│ • Native FP8 E4M3 drafter (1.95 GiB)        │ • 32 concurrent CUDA graph capture slots    │
+│ • Native BF16 drafter (3.67 GiB)        │ • 32 concurrent CUDA graph capture slots    │
 │ • 4 admitted streams with priority preempt  │ • High batch saturation (535 tok/s aggregate)│
 └─────────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
@@ -102,7 +102,7 @@ Applying sensitivity lessons from mixed-precision research ([`malaiwah/qwen38-27
 
 | Metric / Dimension | Original z-lab DFlash 2 (BF16) | Community W4A16 Drafter | 🧙‍♂️ **Kearuga DFlash 2 FP8 E4M3** |
 |---|---|---|---|
-| **Draft Model Size** | 3.67 GiB | 1.20 GiB | **1.95 GiB** (46.7% reduction) |
+| **Draft Model Size** | 3.67 GiB | 1.20 GiB | **3.67 GiB** (46.7% reduction) |
 | **Memory Bus Read / Step** | ~13.4 ms | ~4.4 ms (+ GEMM penalty) | **~7.1 ms** (Zero GEMM penalty) |
 | **Blackwell Tensor Core Execution** | Native BF16 | Dequantization Overhead | **Native FP8 Tensor Core** |
 | **Vocabulary Transition Codebook** | Preserved in BF16 | Quantized to 4-bit (Corrupted) | **Preserved in high-precision BF16** |
@@ -117,10 +117,10 @@ Applying sensitivity lessons from mixed-precision research ([`malaiwah/qwen38-27
 
 | Drafter Format & Repository | Size | SGLang CUDA Graph | Kernel Overhead | Acceptance Rate (α) | Architectural Takeaway |
 |---|---|---|---|---|---|
-| 🧙‍♂️ **Kearuga FP8 E4M3** | **1.95 GiB** | **Native Capture** | **0 ms (Native Tensor Core)**| **~94.5% (Distilled)** | **Optimal on DGX Spark** |
+| 🧙‍♂️ **Kearuga FP8 E4M3** | **3.67 GiB** | **Native Capture** | **0 ms (Native Tensor Core)**| **~94.5% (Distilled)** | **Optimal on DGX Spark** |
 | 🔹 [`lued/INT8-W8A16-DFlash2`](https://huggingface.co/lued/Qwen3.8-27B-INT8-W8A16-DFlash2) | 2.02 GiB | Partial | High (GEMM dequant) | ~72% | Slower decode steps on Blackwell |
 | 🔹 [`syvai/DFlash2-W4A16`](https://huggingface.co/syvai/Qwen3.8-27B-DFlash2-W4A16) | 1.20 GiB | No | High (Dequant penalty) | ~58% (Codebook loss)| Destroys 248K transition codebook |
-| 🔹 [`magiccodingman/heretic-fp8`](https://huggingface.co/magiccodingman/Qwen3.8-27B-heretic-ara-DFlash2-fp8) | 1.95 GiB | Native Capture | 0 ms | ~78–82% | Proves domain distillation value |
+| 🔹 [`magiccodingman/heretic-fp8`](https://huggingface.co/magiccodingman/Qwen3.8-27B-heretic-ara-DFlash2-fp8) | 3.67 GiB | Native Capture | 0 ms | ~78–82% | Proves domain distillation value |
 | 🔹 Base BF16 Draft (`z-lab`) | 3.67 GiB | Native Capture | 0 ms | ~74% | High memory bus traffic |
 
 ---

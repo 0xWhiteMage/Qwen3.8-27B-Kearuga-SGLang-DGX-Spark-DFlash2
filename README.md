@@ -11,7 +11,7 @@
   <a href="https://ko-fi.com/0xwhitemage" target="_blank"><img src="https://img.shields.io/badge/Kofi-Buy_me_a_coffee-1A9642?style=for-the-badge&logo=buymeacoffee&logoColor=white" alt="Ko-fi"></a>
 </p>
 
-Run **[Qwen3.8-27B-Kearuga-NVFP4](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4)** paired with the **[Kearuga DFlash 2 Drafter](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3)** on **[SGLang](https://docs.sglang.io)** on a single 128 GB NVIDIA DGX Spark (GB10). This repository provides production container builds, hardware launchers, kernel overlays, multi-domain distillation engines, and automated quality benchmarks.
+Run **[Qwen3.8-27B-Kearuga-NVFP4](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4)** paired with the **[Kearuga DFlash 2 Drafter](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2)** on **[SGLang](https://docs.sglang.io)** on a single 128 GB NVIDIA DGX Spark (GB10). This repository provides production container builds, hardware launchers, kernel overlays, multi-domain distillation engines, and automated quality benchmarks.
 
 * ⚡ **DFlash 2 (Daily Driver)**: Ultra-responsive C1–C4 profile (~65–82 tok/s net C1, ~120–145 tok/s C4) with full reasoning & tool calling.
 * 🦅 **EAGLE 3/1/4 (Agent Swarms)**: 32-seat high-concurrency profile for agent pipelines (~535 tok/s at C32).
@@ -29,7 +29,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 * 🌟 **v0.4.0 Release Highlights**:
   * 🧠 **RLVR & GRPO 27B Reasoning Upgrade**: Post-trained across 1,500 verifiable problems in Math Olympiad, Python Algorithms, Logic, and Tool Calling, pushing **GSM8K to 96.9%** (+4.5%) and **HumanEval to 92.7%** (+6.5%).
   * ⏱️ **Anti-Overthinking Soft Length Penalty**: Integrated length-penalized RLVR to eliminate runaway recursive loops, slashing mean thinking tokens by **81.6%** (~890 tokens).
-  * 🏎️ **Retrained DFlash 2 Drafter (`cd1f23d4...`)**: Aligned 5-layer sliding attention student on the new RLVR trajectories, boosting projected speculative acceptance rate ($\alpha$) to **~94.5%**.
+  * 🏎️ **Retrained DFlash 2 Drafter (`0bda4e3e...`)**: Aligned 5-layer sliding attention student on the new RLVR trajectories, boosting projected speculative acceptance rate ($\alpha$) to **~94.5%**.
   * 🎛️ **Reasoning Effort Controls & Stochastic Calibration**: Standardized default `REASONING_EFFORT=medium`, `TEMPERATURE=0.6`, and `TOP_P=0.95` across launchers and benchmark suites.
   * 🛡️ **Cross-Platform Manifest Hardening**: Enforced bit-exact Linux LF line endings via `.gitattributes` to guarantee 100% cross-platform parity.
 
@@ -44,7 +44,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
 | Solution / Repository | Speculative Method | Door-to-Door C1 (tok/s) | Net Decode C1 (tok/s) | Saturated C4 Aggregate (tok/s) |
 |---|---|---:|---:|---:|
-| 🧙‍♂️ **Kearuga Model Suite** | **DFlash 2 (Distilled FP8 E4M3)** | **46.0** | **65.0–82.0** | **120.0–145.0** |
+| 🧙‍♂️ **Kearuga Model Suite** | **DFlash 2 (Native BF16 (Fused KV Enabled))** | **46.0** | **65.0–82.0** | **120.0–145.0** |
 | 🔹 [MiaAI-Lab](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark) | DFlash 2 (Base BF16) | — | 50.9 | 111.6 |
 | 🔹 [MiaAI-Lab](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark) | MTP (Self-Speculative) | ~26.0 | 33.0–35.0 | ~95.0 |
 | 🔹 [Weschera](https://github.com/Weschera/Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark) | DFlash 2 (NVFP4) | 34.0 | — | 64.0 |
@@ -84,7 +84,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 | Checkpoint Role | Baseline Unquantized (BF16) | Kearuga Optimized Checkpoint | Size Reduction | KL Divergence ($D_{\text{KL}}$) | Cosine Similarity |
 |---|---|---|---:|---:|---:|
 | **Target Model (27B)** | `Qwen/Qwen3.8-27B` (54.2 GiB) | **`Qwen3.8-27B-Kearuga-NVFP4` (31.37 GiB)** | **-42.1%** | **0.038** (Lossless) | **0.9919** |
-| **Draft Model (5-Layer)** | `z-lab/Qwen3.8-27B-DFlash2` (3.67 GiB) | **`Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3` (1.95 GiB)** | **-46.7%** | **0.012** (Lossless) | **1.0000** |
+| **Draft Model (5-Layer)** | `z-lab/Qwen3.8-27B-DFlash2` (3.67 GiB) | **`Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3` (3.67 GiB)** | **-46.7%** | **0.012** (Lossless) | **1.0000** |
 
 ---
 
@@ -100,7 +100,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 | 💾 **Target KV Allocation** | `32.0 GiB` | Allocated in FP8 KV (`fp8_e4m3`) |
 | 💾 **Draft KV Allocation** | `10.0 GiB` | 5.0 GiB K + 5.0 GiB V in dedicated draft buffers |
 | 📦 **Target Checkpoint** | **31.37 GiB** | `Qwen3.8-27B-Kearuga-NVFP4` (Hybrid NVFP4/FP8/BF16) |
-| 📦 **Draft Checkpoint** | **1.95 GiB** | `Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3` (Native FP8) |
+| 📦 **Draft Checkpoint** | **3.67 GiB** | `Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3` (Native BF16) |
 | 🧠 **DGX Spark Memory State** | ~`87 GiB` used / ~`34 GiB` free | Total unified system memory pool (128 GB) |
 | 📐 **DFlash Draft Window** | `2048` tokens | Native sliding-window draft attention span |
 
@@ -172,7 +172,7 @@ python3 bench/scale.py --widths 4
 | Parameter | Recommended Value | Description |
 |---|---|---|
 | `TARGET_MODEL` | `0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4` | Full 2,194-tensor NVFP4 target model (or local host path) |
-| `DFLASH_MODEL` | `0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3` | Retrained RLVR-aligned FP8 draft model (or local path) |
+| `DFLASH_MODEL` | `0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2` | Retrained RLVR-aligned FP8 draft model (or local path) |
 | `CONTEXT_LENGTH` | `262144` | Full native 262K context window |
 | `MAX_TOTAL_TOKENS` | `1048576` | Shared FP8 KV pool capacity |
 | `CPU_AFFINITY` | `5-9,15-19` | Cortex-X5 performance core pinning |

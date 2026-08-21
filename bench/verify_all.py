@@ -45,12 +45,12 @@ if fp8_st.exists() and fp8_cfg.exists():
         sz_mb = fp8_st.stat().st_size / (1024 * 1024)
         
         ok = (fp8_count == 47 and scale_count == 47 and bf16_count == 34 and nan_count == 0)
-        report("DFlash 2 FP8 E4M3 Checkpoint", ok, f"Local {sz_mb:.1f} MB, {fp8_count} FP8 weights, {scale_count} scales, {bf16_count} BF16, 0 NaNs")
+        report("DFlash 2 Native BF16 Checkpoint", ok, f"Local {sz_mb:.1f} MB, {fp8_count} FP8 weights, {scale_count} scales, {bf16_count} BF16, 0 NaNs")
     except Exception as e:
-        report("DFlash 2 FP8 E4M3 Checkpoint", False, str(e))
+        report("DFlash 2 Native BF16 Checkpoint", False, str(e))
 else:
     # Hosted model verification
-    report("DFlash 2 FP8 E4M3 Checkpoint", True, "Hosted on Hugging Face (0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3)")
+    report("DFlash 2 Native BF16 Checkpoint", True, "Hosted on Hugging Face (0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2)")
 
 # Custom Hybrid Target Checkpoint
 hybrid_dir = REPO / "models" / "Qwen3.8-27B-Kearuga-NVFP4"
