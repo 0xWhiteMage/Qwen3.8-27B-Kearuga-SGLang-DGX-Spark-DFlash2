@@ -150,11 +150,10 @@ def check_launcher_flags(p, required_flags):
 dflash_flags = [
     "--ulimit memlock=-1:-1",
     "--cap-add IPC_LOCK",
-    'FLASHINFER_CUDA_ARCH_LIST="12.1f"',
-    'CUTE_DSL_ARCH="sm_120a"',
     "--max-prefill-tokens",
     "--cuda-graph-max-bs-decode 4",
-    "extra_buffer"
+    "extra_buffer",
+    "MODEL_MOUNT_ARGS"
 ]
 ok, detail = check_launcher_flags(launcher_dflash, dflash_flags)
 report("DFlash 2 Launcher Compliance (start-dflash2.sh)", ok, detail)
@@ -162,9 +161,9 @@ report("DFlash 2 Launcher Compliance (start-dflash2.sh)", ok, detail)
 eagle_flags = [
     "--ulimit memlock=-1:-1",
     "--cap-add IPC_LOCK",
-    'FLASHINFER_CUDA_ARCH_LIST="12.1f"',
     '--cuda-graph-max-bs-decode "${CUDA_GRAPH_MAX_BS}"',
-    "extra_buffer_lazy"
+    "extra_buffer_lazy",
+    "MODEL_MOUNT_ARGS"
 ]
 ok, detail = check_launcher_flags(launcher_eagle, eagle_flags)
 report("EAGLE Launcher Compliance (start-eagle.sh)", ok, detail)

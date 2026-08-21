@@ -8,13 +8,6 @@ set -euo pipefail
 #   1. Build the DFlash 2 overlay image once:
 #      bash patch/build-dflash2-image.sh
 #   2. Ensure .env is present (use .env.sample as template).
-#
-# Notes:
-#   - Uses DFlash 2 speculative decoding (0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3 @ cd1f23d4).
-#   - Requires the DFlash 2 overlay image: lmsysorg/sglang:qwen38-27b-dflash2
-#   - Do NOT enable torch.compile or continuous-decode-steps > 1 on DFlash 2
-#     (measured to crawl to 3–6 tok/s on this build).
-#   - One speculative head per process; switching heads requires a restart.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -33,40 +26,34 @@ if [[ -f "${SCRIPT_DIR}/.env" ]]; then
   done < "${SCRIPT_DIR}/.env"
 fi
 
-# Defaults
-CONTEXT_LENGTH="${CONTEXT_LENGTH:-262144}"
-MAX_CONCURRENT_REQUESTS="${MAX_CONCURRENT_REQUESTS:-4}"
-MEM_FRACTION="${MEM_FRACTION:-0.90}"
-CPUSET="${CPUSET:-${CPU_AFFINITY:-5-9,15-19}}"
-CUDA_GRAPH_MAX_BS="${CUDA_GRAPH_MAX_BS:-4}"
-CHUNKED_PREFILL="${CHUNKED_PREFILL:-8192}"
-MAX_TOTAL_TOKENS="${MAX_TOTAL_TOKENS:-1048576}"
-
-# Server network & model naming
-PORT="${PORT:-8888}"
-HOST="${HOST:-0.0.0.0}"
-SERVED_MODEL_NAME="${SERVED_MODEL_NAME:-qwen3.8-27b-sglang}"
-
-# DFlash 2 specific
 DFLASH_IMAGE="${DFLASH_IMAGE:-lmsysorg/sglang:qwen38-27b-dflash2}"
 TARGET_MODEL="${TARGET_MODEL:-0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4}"
-TARGET_REV="${TARGET_REV:-554ebba9b5f1b79dc11246341960360e6ef05ef4}"
+TARGET_REV="${TARGET_REV:-8ea86bdcdd34c84b3d25b69fb7fcc8fc48d0cdd0}"
 DFLASH_MODEL="${DFLASH_MODEL:-0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3}"
-DFLASH_REV="${DFLASH_REV:-50307d4c4cde6860d4eee73e2547cd786fe8e8a4}"
+DFLASH_REV="${DFLASH_REV:-cd1f23d4ff625ac68ac08457331547e2edab3991}"
+SERVED_MODEL_NAME="${SERVED_MODEL_NAME:-qwen3.8-27b-sglang}"
+
+HOST="${HOST:-0.0.0.0}"
+PORT="${PORT:-8888}"
+MEM_FRACTION="${MEM_FRACTION:-0.78}"
+CHUNKED_PREFILL="${CHUNKED_PREFILL:-8192}"
+MAX_CONCURRENT_REQUESTS="${MAX_CONCURRENT_REQUESTS:-4}"
+CONTEXT_LENGTH="${CONTEXT_LENGTH:-262144}"
+MAX_TOTAL_TOKENS="${MAX_TOTAL_TOKENS:-1048576}"
 DFLASH_DRAFT_TOKENS="${DFLASH_DRAFT_TOKENS:-8}"
 DFLASH_DRAFT_WINDOW_SIZE="${DFLASH_DRAFT_WINDOW_SIZE:-2048}"
+CPUSET="${CPUSET:-${CPU_AFFINITY:-}}"
+HEALTH_TIMEOUT_SECS="${HEALTH_TIMEOUT_SECS:-900}"
+
 PRIORITY_SCHEDULING="${PRIORITY_SCHEDULING:-1}"
 DEFAULT_PRIORITY_VALUE="${DEFAULT_PRIORITY_VALUE:-0}"
 PRIORITY_PREEMPTION_THRESHOLD="${PRIORITY_PREEMPTION_THRESHOLD:-10}"
 
-# This qualified DFlash profile is native-context only. MAX_TOTAL_TOKENS is the
-# shared KV pool; it does not change the per-request context limit.
 if (( CONTEXT_LENGTH != 262144 )); then
   echo "CONTEXT_LENGTH '${CONTEXT_LENGTH}' unsupported by this qualified profile (use 262144)"
   exit 1
 fi
 
-# Qwen3.8 DFlash uses five GDN state slots per admitted request.
 MAMBA_SLOTS_PER_REQ=5
 MAMBA_CACHE_SIZE=$(( MAX_CONCURRENT_REQUESTS * MAMBA_SLOTS_PER_REQ ))
 
@@ -94,7 +81,6 @@ command -v curl >/dev/null 2>&1 || { echo "curl is not on PATH"; exit 1; }
 
 mkdir -p "${HF_HOME}" "${TRITON_CACHE_DIR}"
 
-# Optional. Export HF_TOKEN before launch for authenticated Hugging Face pulls.
 export HF_TOKEN="${HF_TOKEN:-}"
 
 if docker ps -a --format '{{.Names}}' | grep -qx "${CONTAINER_NAME}"; then
@@ -142,28 +128,65 @@ if [[ "${DFLASH_MODEL}" == /* ]]; then
   MODEL_MOUNT_ARGS+=(-v "${DFLASH_MODEL}:${DFLASH_MODEL}")
 fi
 
-# Conditional revisions (only passed if set, allows local paths without revisions)
+# Conditional revisions
 REVISION_ARGS=()
-[[ -n "${TARGET_REV:-}" ]] && REVISION_ARGS=("${REVISION_ARGS[@]}")
+[[ -n "${TARGET_REV:-}" ]] && REVISION_ARGS=(--revision "${TARGET_REV}")
 DRAFT_REV_ARGS=()
-[[ -n "${DFLASH_REV:-}" ]] && DRAFT_REV_ARGS=("${DRAFT_REV_ARGS[@]}")
+[[ -n "${DFLASH_REV:-}" ]] && DRAFT_REV_ARGS=(--speculative-draft-model-revision "${DFLASH_REV}")
 
-# Auto bind-mount local host model paths if specified as absolute paths
-MODEL_MOUNT_ARGS=()
-if [[ "${TARGET_MODEL}" == /* ]]; then
-  MODEL_MOUNT_ARGS+=(-v "${TARGET_MODEL}:${TARGET_MODEL}")
-fi
-if [[ "${DFLASH_MODEL}" == /* ]]; then
-  MODEL_MOUNT_ARGS+=(-v "${DFLASH_MODEL}:${DFLASH_MODEL}")
-fi
-
-# Conditional revisions (only passed if set, allows local paths without revisions)
-REVISION_ARGS=()
-[[ -n "${TARGET_REV:-}" ]] && REVISION_ARGS=("${REVISION_ARGS[@]}")
-DRAFT_REV_ARGS=()
-[[ -n "${DFLASH_REV:-}" ]] && DRAFT_REV_ARGS=("${DRAFT_REV_ARGS[@]}")
-
-docker run -d   --name "${CONTAINER_NAME}"   --network host   --ipc host   --privileged   --cap-add IPC_LOCK   --ulimit memlock=-1:-1   --ulimit stack=67108864   --gpus all   --shm-size 32g   "${PIN_ARGS[@]}"   "${MODEL_MOUNT_ARGS[@]}"   "${MODEL_MOUNT_ARGS[@]}"   -e HF_HOME=/root/.cache/huggingface   -e TRITON_CACHE_DIR=/root/.triton   -e HF_TOKEN="${HF_TOKEN:-}"   -e FLASHINFER_CUDA_ARCH_LIST="12.1f"   -e CUTE_DSL_ARCH="sm_120a"   -e PYTHONUNBUFFERED=1   -v "${HF_HOME}:/root/.cache/huggingface"   -v "${TRITON_CACHE_DIR}:/root/.triton"   "${DFLASH_IMAGE}"   python3 -m sglang.launch_server   --model-path "${TARGET_MODEL}"   "${REVISION_ARGS[@]}"   --served-model-name "${SERVED_MODEL_NAME}"   --trust-remote-code   --mem-fraction-static "${MEM_FRACTION}"   --attention-backend flashinfer   --chunked-prefill-size "${CHUNKED_PREFILL}"   --max-prefill-tokens "${CHUNKED_PREFILL}"   "${PREFILL_GRAPH_ARGS[@]}"   --kv-cache-dtype fp8_e4m3   --mamba-ssm-dtype bfloat16   --mamba-full-memory-ratio 4.21   --mamba-radix-cache-strategy extra_buffer   --max-mamba-cache-size "${MAMBA_CACHE_SIZE}"   --max-running-requests "${MAX_CONCURRENT_REQUESTS}"   --max-total-tokens "${MAX_TOTAL_TOKENS}"   --context-length "${CONTEXT_LENGTH}"   --speculative-algorithm DFLASH   --speculative-draft-model-path "${DFLASH_MODEL}"   "${DRAFT_REV_ARGS[@]}"   --speculative-num-draft-tokens "${DFLASH_DRAFT_TOKENS}"   --speculative-draft-window-size "${DFLASH_DRAFT_WINDOW_SIZE}"   --reasoning-parser qwen3   --tool-call-parser qwen3_coder   --sampling-defaults model   --enable-metrics   --enable-cache-report   --cuda-graph-max-bs-decode 4   --sleep-on-idle   "${PRIORITY_ARGS[@]}"   --host "${HOST}"   --port "${PORT}"   >/dev/null
+docker run -d \
+  --name "${CONTAINER_NAME}" \
+  --network host \
+  --ipc host \
+  --privileged \
+  --cap-add IPC_LOCK \
+  --ulimit memlock=-1:-1 \
+  --ulimit stack=67108864 \
+  --gpus all \
+  --shm-size 32g \
+  "${PIN_ARGS[@]}" \
+  "${MODEL_MOUNT_ARGS[@]}" \
+  -e HF_HOME=/root/.cache/huggingface \
+  -e TRITON_CACHE_DIR=/root/.triton \
+  -e HF_TOKEN="${HF_TOKEN:-}" \
+  -e PYTHONUNBUFFERED=1 \
+  -v "${HF_HOME}:/root/.cache/huggingface" \
+  -v "${TRITON_CACHE_DIR}:/root/.triton" \
+  "${DFLASH_IMAGE}" \
+  python3 -m sglang.launch_server \
+  --model-path "${TARGET_MODEL}" \
+  "${REVISION_ARGS[@]}" \
+  --served-model-name "${SERVED_MODEL_NAME}" \
+  --trust-remote-code \
+  --mem-fraction-static "${MEM_FRACTION}" \
+  --attention-backend flashinfer \
+  --chunked-prefill-size "${CHUNKED_PREFILL}" \
+  --max-prefill-tokens "${CHUNKED_PREFILL}" \
+  "${PREFILL_GRAPH_ARGS[@]}" \
+  --kv-cache-dtype fp8_e4m3 \
+  --mamba-ssm-dtype bfloat16 \
+  --mamba-full-memory-ratio 4.21 \
+  --mamba-radix-cache-strategy extra_buffer \
+  --max-mamba-cache-size "${MAMBA_CACHE_SIZE}" \
+  --max-running-requests "${MAX_CONCURRENT_REQUESTS}" \
+  --max-total-tokens "${MAX_TOTAL_TOKENS}" \
+  --context-length "${CONTEXT_LENGTH}" \
+  --speculative-algorithm DFLASH \
+  --speculative-draft-model-path "${DFLASH_MODEL}" \
+  "${DRAFT_REV_ARGS[@]}" \
+  --speculative-num-draft-tokens "${DFLASH_DRAFT_TOKENS}" \
+  --speculative-draft-window-size "${DFLASH_DRAFT_WINDOW_SIZE}" \
+  --reasoning-parser qwen3 \
+  --tool-call-parser qwen3_coder \
+  --sampling-defaults model \
+  --enable-metrics \
+  --enable-cache-report \
+  --cuda-graph-max-bs-decode 4 \
+  --sleep-on-idle \
+  "${PRIORITY_ARGS[@]}" \
+  --host "${HOST}" \
+  --port "${PORT}" \
+  >/dev/null
 
 container_id="$(docker inspect -f '{{.Id}}' "${CONTAINER_NAME}")"
 echo "${container_id}" > "${PID_FILE}"
@@ -181,31 +204,33 @@ docker logs -f "${CONTAINER_NAME}" 2>&1 | tee -a "${LOG_FILE}" | grep --line-buf
 log_follow_pid=$!
 
 echo "Waiting for HTTP readiness at ${READY_URL}"
-heartbeat=0
-max_probes=120
-probe=0
-until curl -fsS "${READY_URL}" >/dev/null 2>&1 || curl -fsS "${HEALTH_URL}" >/dev/null 2>&1; do
-  if ! docker ps --format '{{.Names}}' | grep -qx "${CONTAINER_NAME}"; then
-    echo "SGLang container exited before becoming ready"
-    tail -n 200 "${LOG_FILE}" || true
-    exit 1
-  fi
-  probe=$((probe + 1))
-  if (( probe > max_probes )); then
-    echo "Timeout waiting for SGLang readiness after ${max_probes} probes (10 minutes)."
-    tail -n 200 "${LOG_FILE}" || true
-    exit 1
-  fi
-  if (( heartbeat % 6 == 0 )); then
-    echo "  still starting... (probe ${probe}/${max_probes})"
-  fi
-  heartbeat=$((heartbeat + 1))
-  sleep 5
-done
+start_time="$(date +%s)"
+max_wait="${HEALTH_TIMEOUT_SECS}"
 
-echo "SGLang is ready (DFlash 2 active)"
-echo "OpenAI base URL: http://${HOST}:${PORT}/v1"
-echo "Anthropic-compatible: http://${HOST}:${PORT}/v1/messages"
-echo "Served model name: ${SERVED_MODEL_NAME}"
-echo "Thinking: ON by default (disable per request: chat_template_kwargs {\"enable_thinking\": false})"
-echo "SGLang is ready and responding; shell is now free."
+while true; do
+  if ! docker ps --format '{{.Names}}' | grep -qx "${CONTAINER_NAME}"; then
+    echo
+    echo "ERROR: container exited unexpectedly during startup."
+    echo "Review ${LOG_FILE} for details."
+    exit 1
+  fi
+
+  if curl -s -f -o /dev/null "${READY_URL}"; then
+    if curl -s -f -o /dev/null "${HEALTH_URL}"; then
+      echo
+      echo "Qwen3.8-27B with DFlash 2 is ready at http://${HOST}:${PORT}"
+      exit 0
+    fi
+  fi
+
+  now="$(date +%s)"
+  elapsed=$(( now - start_time ))
+  if (( elapsed > max_wait )); then
+    echo
+    echo "ERROR: server failed to become ready within ${max_wait}s."
+    echo "Review ${LOG_FILE} for details."
+    exit 1
+  fi
+
+  sleep 2
+done
