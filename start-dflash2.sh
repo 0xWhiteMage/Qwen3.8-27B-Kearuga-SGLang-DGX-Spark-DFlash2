@@ -133,7 +133,37 @@ if [[ "${PRIORITY_SCHEDULING}" == "1" ]]; then
   )
 fi
 
-docker run -d   --name "${CONTAINER_NAME}"   --network host   --ipc host   --privileged   --cap-add IPC_LOCK   --ulimit memlock=-1:-1   --ulimit stack=67108864   --gpus all   --shm-size 32g   "${PIN_ARGS[@]}"   -e HF_HOME=/root/.cache/huggingface   -e TRITON_CACHE_DIR=/root/.triton   -e HF_TOKEN="${HF_TOKEN:-}"   -e FLASHINFER_CUDA_ARCH_LIST="12.1f"   -e CUTE_DSL_ARCH="sm_120a"   -e PYTHONUNBUFFERED=1   -v "${HF_HOME}:/root/.cache/huggingface"   -v "${TRITON_CACHE_DIR}:/root/.triton"   "${DFLASH_IMAGE}"   python3 -m sglang.launch_server   --model-path "${TARGET_MODEL}"   --revision "${TARGET_REV}"   --served-model-name "${SERVED_MODEL_NAME}"   --trust-remote-code   --mem-fraction-static "${MEM_FRACTION}"   --attention-backend flashinfer   --chunked-prefill-size "${CHUNKED_PREFILL}"   --max-prefill-tokens "${CHUNKED_PREFILL}"   "${PREFILL_GRAPH_ARGS[@]}"   --kv-cache-dtype fp8_e4m3   --mamba-ssm-dtype bfloat16   --mamba-full-memory-ratio 4.21   --mamba-radix-cache-strategy extra_buffer   --max-mamba-cache-size "${MAMBA_CACHE_SIZE}"   --max-running-requests "${MAX_CONCURRENT_REQUESTS}"   --max-total-tokens "${MAX_TOTAL_TOKENS}"   --context-length "${CONTEXT_LENGTH}"   --speculative-algorithm DFLASH   --speculative-draft-model-path "${DFLASH_MODEL}"   --speculative-draft-model-revision "${DFLASH_REV}"   --speculative-num-draft-tokens "${DFLASH_DRAFT_TOKENS}"   --speculative-draft-window-size "${DFLASH_DRAFT_WINDOW_SIZE}"   --reasoning-parser qwen3   --tool-call-parser qwen3_coder   --sampling-defaults model   --enable-metrics   --enable-cache-report   --cuda-graph-max-bs-decode 4   --sleep-on-idle   "${PRIORITY_ARGS[@]}"   --host "${HOST}"   --port "${PORT}"   >/dev/null
+# Auto bind-mount local host model paths if specified as absolute paths
+MODEL_MOUNT_ARGS=()
+if [[ "${TARGET_MODEL}" == /* ]]; then
+  MODEL_MOUNT_ARGS+=(-v "${TARGET_MODEL}:${TARGET_MODEL}")
+fi
+if [[ "${DFLASH_MODEL}" == /* ]]; then
+  MODEL_MOUNT_ARGS+=(-v "${DFLASH_MODEL}:${DFLASH_MODEL}")
+fi
+
+# Conditional revisions (only passed if set, allows local paths without revisions)
+REVISION_ARGS=()
+[[ -n "${TARGET_REV:-}" ]] && REVISION_ARGS=("${REVISION_ARGS[@]}")
+DRAFT_REV_ARGS=()
+[[ -n "${DFLASH_REV:-}" ]] && DRAFT_REV_ARGS=("${DRAFT_REV_ARGS[@]}")
+
+# Auto bind-mount local host model paths if specified as absolute paths
+MODEL_MOUNT_ARGS=()
+if [[ "${TARGET_MODEL}" == /* ]]; then
+  MODEL_MOUNT_ARGS+=(-v "${TARGET_MODEL}:${TARGET_MODEL}")
+fi
+if [[ "${DFLASH_MODEL}" == /* ]]; then
+  MODEL_MOUNT_ARGS+=(-v "${DFLASH_MODEL}:${DFLASH_MODEL}")
+fi
+
+# Conditional revisions (only passed if set, allows local paths without revisions)
+REVISION_ARGS=()
+[[ -n "${TARGET_REV:-}" ]] && REVISION_ARGS=("${REVISION_ARGS[@]}")
+DRAFT_REV_ARGS=()
+[[ -n "${DFLASH_REV:-}" ]] && DRAFT_REV_ARGS=("${DRAFT_REV_ARGS[@]}")
+
+docker run -d   --name "${CONTAINER_NAME}"   --network host   --ipc host   --privileged   --cap-add IPC_LOCK   --ulimit memlock=-1:-1   --ulimit stack=67108864   --gpus all   --shm-size 32g   "${PIN_ARGS[@]}"   "${MODEL_MOUNT_ARGS[@]}"   "${MODEL_MOUNT_ARGS[@]}"   -e HF_HOME=/root/.cache/huggingface   -e TRITON_CACHE_DIR=/root/.triton   -e HF_TOKEN="${HF_TOKEN:-}"   -e FLASHINFER_CUDA_ARCH_LIST="12.1f"   -e CUTE_DSL_ARCH="sm_120a"   -e PYTHONUNBUFFERED=1   -v "${HF_HOME}:/root/.cache/huggingface"   -v "${TRITON_CACHE_DIR}:/root/.triton"   "${DFLASH_IMAGE}"   python3 -m sglang.launch_server   --model-path "${TARGET_MODEL}"   "${REVISION_ARGS[@]}"   --served-model-name "${SERVED_MODEL_NAME}"   --trust-remote-code   --mem-fraction-static "${MEM_FRACTION}"   --attention-backend flashinfer   --chunked-prefill-size "${CHUNKED_PREFILL}"   --max-prefill-tokens "${CHUNKED_PREFILL}"   "${PREFILL_GRAPH_ARGS[@]}"   --kv-cache-dtype fp8_e4m3   --mamba-ssm-dtype bfloat16   --mamba-full-memory-ratio 4.21   --mamba-radix-cache-strategy extra_buffer   --max-mamba-cache-size "${MAMBA_CACHE_SIZE}"   --max-running-requests "${MAX_CONCURRENT_REQUESTS}"   --max-total-tokens "${MAX_TOTAL_TOKENS}"   --context-length "${CONTEXT_LENGTH}"   --speculative-algorithm DFLASH   --speculative-draft-model-path "${DFLASH_MODEL}"   "${DRAFT_REV_ARGS[@]}"   --speculative-num-draft-tokens "${DFLASH_DRAFT_TOKENS}"   --speculative-draft-window-size "${DFLASH_DRAFT_WINDOW_SIZE}"   --reasoning-parser qwen3   --tool-call-parser qwen3_coder   --sampling-defaults model   --enable-metrics   --enable-cache-report   --cuda-graph-max-bs-decode 4   --sleep-on-idle   "${PRIORITY_ARGS[@]}"   --host "${HOST}"   --port "${PORT}"   >/dev/null
 
 container_id="$(docker inspect -f '{{.Id}}' "${CONTAINER_NAME}")"
 echo "${container_id}" > "${PID_FILE}"

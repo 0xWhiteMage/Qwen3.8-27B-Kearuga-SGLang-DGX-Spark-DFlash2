@@ -103,6 +103,16 @@ fi
 PIN_ARGS=()
 [[ -n "${CPUSET}" ]] && PIN_ARGS=(--cpuset-cpus "${CPUSET}")
 
+# Auto bind-mount local host model paths if specified as absolute paths
+MODEL_MOUNT_ARGS=()
+if [[ "${TARGET_MODEL}" == /* ]]; then
+  MODEL_MOUNT_ARGS+=(-v "${TARGET_MODEL}:${TARGET_MODEL}")
+fi
+
+# Conditional revisions
+REVISION_ARGS=()
+[[ -n "${TARGET_REV:-}" ]] && REVISION_ARGS=("${REVISION_ARGS[@]}")
+
 echo "Starting EAGLE ${SPEC_STEPS}/${SPEC_TOPK}/${SPEC_DRAFT} high-concurrency profile"
 echo "Target: ${TARGET_MODEL} @ ${TARGET_REV:0:8}"
 echo "Seats: ${MAX_CONCURRENT_REQUESTS}; context: ${CONTEXT_LENGTH}; shared tokens: ${MAX_TOTAL_TOKENS}"
@@ -115,7 +125,7 @@ cat >"${LOG_FILE}" <<EOF
 [$(date -Is)] launching SGLang container (EAGLE high-concurrency)
 EOF
 
-docker run -d   --name "${CONTAINER_NAME}"   --network host   --ipc host   --privileged   --cap-add IPC_LOCK   --ulimit memlock=-1:-1   --ulimit stack=67108864   --gpus all   --shm-size 32g   "${PIN_ARGS[@]}"   -e HF_HOME=/root/.cache/huggingface   -e TRITON_CACHE_DIR=/root/.triton   -e HF_TOKEN="${HF_TOKEN:-}"   -e FLASHINFER_CUDA_ARCH_LIST="12.1f"   -e CUTE_DSL_ARCH="sm_120a"   -e PYTHONUNBUFFERED=1   -v "${HF_HOME}:/root/.cache/huggingface"   -v "${TRITON_CACHE_DIR}:/root/.triton"   "${EAGLE_IMAGE}"   python3 -m sglang.launch_server   --model-path "${TARGET_MODEL}"   --revision "${TARGET_REV}"   --served-model-name "${SERVED_MODEL_NAME}"   --trust-remote-code   --mem-fraction-static "${MEM_FRACTION}"   --attention-backend flashinfer   --chunked-prefill-size "${CHUNKED_PREFILL}"   --max-prefill-tokens "${CHUNKED_PREFILL}"   --disable-prefill-cuda-graph   --kv-cache-dtype fp8_e4m3   --mamba-ssm-dtype bfloat16   --mamba-full-memory-ratio 4.21   --mamba-radix-cache-strategy extra_buffer_lazy   --max-mamba-cache-size "${MAMBA_CACHE_SIZE}"   --max-running-requests "${MAX_CONCURRENT_REQUESTS}"   --max-total-tokens "${MAX_TOTAL_TOKENS}"   --context-length "${CONTEXT_LENGTH}"   --speculative-algorithm EAGLE   --speculative-num-steps "${SPEC_STEPS}"   --speculative-eagle-topk "${SPEC_TOPK}"   --speculative-num-draft-tokens "${SPEC_DRAFT}"   --speculative-attention-mode "${SPEC_ATTENTION_MODE}"   --enable-linear-replayssm-spec   --enable-torch-compile   --torch-compile-max-bs "${TORCH_COMPILE_MAX_BS}"   --num-continuous-decode-steps "${CONTINUOUS_DECODE_STEPS}"   --cuda-graph-max-bs-decode "${CUDA_GRAPH_MAX_BS}"   --reasoning-parser qwen3   --tool-call-parser qwen3_coder   --sampling-defaults model   --enable-metrics   --enable-cache-report   --sleep-on-idle   "${PRIORITY_ARGS[@]}"   --host "${HOST}"   --port "${PORT}"   >/dev/null
+docker run -d   --name "${CONTAINER_NAME}"   --network host   --ipc host   --privileged   --cap-add IPC_LOCK   --ulimit memlock=-1:-1   --ulimit stack=67108864   --gpus all   --shm-size 32g   "${PIN_ARGS[@]}"   "${MODEL_MOUNT_ARGS[@]}"   -e HF_HOME=/root/.cache/huggingface   -e TRITON_CACHE_DIR=/root/.triton   -e HF_TOKEN="${HF_TOKEN:-}"   -e FLASHINFER_CUDA_ARCH_LIST="12.1f"   -e CUTE_DSL_ARCH="sm_120a"   -e PYTHONUNBUFFERED=1   -v "${HF_HOME}:/root/.cache/huggingface"   -v "${TRITON_CACHE_DIR}:/root/.triton"   "${EAGLE_IMAGE}"   python3 -m sglang.launch_server   --model-path "${TARGET_MODEL}"   "${REVISION_ARGS[@]}"   --served-model-name "${SERVED_MODEL_NAME}"   --trust-remote-code   --mem-fraction-static "${MEM_FRACTION}"   --attention-backend flashinfer   --chunked-prefill-size "${CHUNKED_PREFILL}"   --max-prefill-tokens "${CHUNKED_PREFILL}"   --disable-prefill-cuda-graph   --kv-cache-dtype fp8_e4m3   --mamba-ssm-dtype bfloat16   --mamba-full-memory-ratio 4.21   --mamba-radix-cache-strategy extra_buffer_lazy   --max-mamba-cache-size "${MAMBA_CACHE_SIZE}"   --max-running-requests "${MAX_CONCURRENT_REQUESTS}"   --max-total-tokens "${MAX_TOTAL_TOKENS}"   --context-length "${CONTEXT_LENGTH}"   --speculative-algorithm EAGLE   --speculative-num-steps "${SPEC_STEPS}"   --speculative-eagle-topk "${SPEC_TOPK}"   --speculative-num-draft-tokens "${SPEC_DRAFT}"   --speculative-attention-mode "${SPEC_ATTENTION_MODE}"   --enable-linear-replayssm-spec   --enable-torch-compile   --torch-compile-max-bs "${TORCH_COMPILE_MAX_BS}"   --num-continuous-decode-steps "${CONTINUOUS_DECODE_STEPS}"   --cuda-graph-max-bs-decode "${CUDA_GRAPH_MAX_BS}"   --reasoning-parser qwen3   --tool-call-parser qwen3_coder   --sampling-defaults model   --enable-metrics   --enable-cache-report   --sleep-on-idle   "${PRIORITY_ARGS[@]}"   --host "${HOST}"   --port "${PORT}"   >/dev/null
 
 container_id="$(docker inspect -f '{{.Id}}' "${CONTAINER_NAME}")"
 echo "${container_id}" > "${PID_FILE}"
