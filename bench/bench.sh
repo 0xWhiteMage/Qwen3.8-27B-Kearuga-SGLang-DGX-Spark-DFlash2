@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# Simple single-stream decode benchmark against the local SGLang server.
+# Comprehensive benchmark and validation suite for Qwen3.8-27B on SGLang.
 set -euo pipefail
 URL="${URL:-http://127.0.0.1:8888/v1/chat/completions}"
 MODEL="${MODEL:-qwen3.8-27b-sglang}"
 LABEL="${1:-bench}"
 export URL MODEL
 
-bench() {
+echo "=== 1. Running Deterministic Semantic Gate ==="
+python3 bench/semantic_gate.py --base-url "${URL%/chat/completions}" || { echo "Semantic gate failed"; exit 1; }
+
+echo "=== 2. Single-Stream Throughput & Latency Probes ==="
+bench_prompt() {
   local label="$1" payload="$2"
   python3 - "$label" "$payload" <<'EOF'
 import json, os, sys, time, urllib.request
@@ -27,19 +31,18 @@ EOF
 }
 
 PROMPT="Write a detailed technical essay on the history of computing, from Babbage to GPUs."
-bench "$LABEL thinking"    "{\"messages\":[{\"role\":\"user\",\"content\":\"$PROMPT\"}],\"max_tokens\":400}"
-bench "$LABEL non-thinking" "{\"messages\":[{\"role\":\"user\",\"content\":\"$PROMPT\"}],\"max_tokens\":400,\"temperature\":0.7,\"top_p\":0.8,\"presence_penalty\":1.5,\"chat_template_kwargs\":{\"enable_thinking\":false}}"
-bench "$LABEL toolcall" "{\"messages\":[{\"role\":\"user\",\"content\":\"Call get_weather for Tokyo, then reserve_table for 4 at 7pm tonight via the reserve_table tool, then send a confirmation via send_email. Emit the tool calls.\"}],\"max_tokens\":400,\"chat_template_kwargs\":{\"enable_thinking\":false}}"
+bench_prompt "$LABEL thinking" "{"messages":[{"role":"user","content":"$PROMPT"}],"max_tokens":400}"
+bench_prompt "$LABEL non-thinking" "{"messages":[{"role":"user","content":"$PROMPT"}],"max_tokens":400,"temperature":0.7,"top_p":0.8,"presence_penalty":1.5,"chat_template_kwargs":{"enable_thinking":false}}"
+bench_prompt "$LABEL toolcall" "{"messages":[{"role":"user","content":"Call get_weather for Tokyo, then reserve_table for 4 at 7pm tonight via the reserve_table tool, then send a confirmation via send_email. Emit the tool calls."}],"max_tokens":400,"chat_template_kwargs":{"enable_thinking":false}}"
 
-# TTFT probe: ~16k-token prompt with a unique lead (defeats prefix cache),
-# streaming; reports time-to-first-token and effective prefill rate.
+echo "=== 3. TTFT Probe (~16k prompt) ==="
 python3 - <<'EOF'
 import json, os, time, urllib.request, uuid
 para = ("The quick brown fox jumps over the lazy dog while the sun sets "
         "over the mountains and rivers flow gently through the valley. ") * 640
 prompt = f"Session {uuid.uuid4()}. Summarize in one sentence:\n\n{para}"
 body = {"model": os.environ["MODEL"], "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 32, "stream": True}
+        "max_tokens": 32, "stream": True, "chat_template_kwargs": {"enable_thinking": False}}
 req = urllib.request.Request(os.environ["URL"],
     data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
 t0 = time.time(); first = None
@@ -52,3 +55,5 @@ ttft = (first or time.time()) - t0
 n = len(prompt.split())
 print(f"ttft~16k                   ttft={ttft:6.2f}s  prefill~{n/ttft:7.0f} tok/s")
 EOF
+
+echo "All baseline benchmarks completed successfully."

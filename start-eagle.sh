@@ -24,6 +24,10 @@ MEM_FRACTION="${EAGLE_MEM_FRACTION:-0.90}"
 CPUSET="${EAGLE_CPUSET:-5-9,15-19}"
 CHUNKED_PREFILL="${EAGLE_CHUNKED_PREFILL:-8192}"
 
+PORT="${PORT:-8888}"
+HOST="${HOST:-0.0.0.0}"
+SERVED_MODEL_NAME="${SERVED_MODEL_NAME:-qwen3.8-27b-sglang}"
+
 SPEC_STEPS="${EAGLE_SPEC_STEPS:-3}"
 SPEC_TOPK="${EAGLE_SPEC_TOPK:-1}"
 SPEC_DRAFT="${EAGLE_SPEC_DRAFT:-4}"
@@ -63,16 +67,14 @@ esac
 
 MAMBA_SLOTS_PER_REQ=4
 MAMBA_CACHE_SIZE=$(( MAX_CONCURRENT_REQUESTS * MAMBA_SLOTS_PER_REQ ))
-SERVED_MODEL_NAME="qwen3.8-27b-sglang"
 CONTAINER_NAME="qwen3.8-27b-sglang"
-HOST="0.0.0.0"
-PORT="8888"
 PID_FILE=".sglang.pid"
 LOG_FILE=".sglang.log"
 WORK_DIR="$(pwd)"
 HF_HOME="${WORK_DIR}/.cache/huggingface"
 TRITON_CACHE_DIR="${WORK_DIR}/.cache/triton"
 READY_URL="http://127.0.0.1:${PORT}/v1/models"
+HEALTH_URL="http://127.0.0.1:${PORT}/health"
 
 command -v docker >/dev/null 2>&1 || { echo "docker is not on PATH"; exit 1; }
 command -v curl >/dev/null 2>&1 || { echo "curl is not on PATH"; exit 1; }
@@ -110,57 +112,7 @@ cat >"${LOG_FILE}" <<EOF
 [$(date -Is)] launching SGLang container (EAGLE high-concurrency)
 EOF
 
-docker run -d \
-  --name "${CONTAINER_NAME}" \
-  --network host \
-  --ipc host \
-  --privileged \
-  --gpus all \
-  --shm-size 32g \
-  "${PIN_ARGS[@]}" \
-  -e HF_HOME=/root/.cache/huggingface \
-  -e TRITON_CACHE_DIR=/root/.triton \
-  -e HF_TOKEN="${HF_TOKEN:-}" \
-  -v "${HF_HOME}:/root/.cache/huggingface" \
-  -v "${TRITON_CACHE_DIR}:/root/.triton" \
-  "${EAGLE_IMAGE}" \
-  python3 -m sglang.launch_server \
-  --model-path "${TARGET_MODEL}" \
-  --revision "${TARGET_REV}" \
-  --served-model-name "${SERVED_MODEL_NAME}" \
-  --trust-remote-code \
-  --mem-fraction-static "${MEM_FRACTION}" \
-  --attention-backend flashinfer \
-  --chunked-prefill-size "${CHUNKED_PREFILL}" \
-  --disable-prefill-cuda-graph \
-  --kv-cache-dtype fp8_e4m3 \
-  --mamba-ssm-dtype bfloat16 \
-  --mamba-full-memory-ratio 4.21 \
-  --mamba-radix-cache-strategy extra_buffer_lazy \
-  --max-mamba-cache-size "${MAMBA_CACHE_SIZE}" \
-  --max-running-requests "${MAX_CONCURRENT_REQUESTS}" \
-  --max-total-tokens "${MAX_TOTAL_TOKENS}" \
-  --context-length "${CONTEXT_LENGTH}" \
-  --speculative-algorithm EAGLE \
-  --speculative-num-steps "${SPEC_STEPS}" \
-  --speculative-eagle-topk "${SPEC_TOPK}" \
-  --speculative-num-draft-tokens "${SPEC_DRAFT}" \
-  --speculative-attention-mode "${SPEC_ATTENTION_MODE}" \
-  --enable-linear-replayssm-spec \
-  --enable-torch-compile \
-  --torch-compile-max-bs "${TORCH_COMPILE_MAX_BS}" \
-  --num-continuous-decode-steps "${CONTINUOUS_DECODE_STEPS}" \
-  --cuda-graph-max-bs-decode "${CUDA_GRAPH_MAX_BS}" \
-  --reasoning-parser qwen3 \
-  --tool-call-parser qwen3_coder \
-  --sampling-defaults model \
-  --enable-metrics \
-  --enable-cache-report \
-  --sleep-on-idle \
-  "${PRIORITY_ARGS[@]}" \
-  --host "${HOST}" \
-  --port "${PORT}" \
-  >/dev/null
+docker run -d   --name "${CONTAINER_NAME}"   --network host   --ipc host   --privileged   --cap-add IPC_LOCK   --ulimit memlock=-1:-1   --ulimit stack=67108864   --gpus all   --shm-size 32g   "${PIN_ARGS[@]}"   -e HF_HOME=/root/.cache/huggingface   -e TRITON_CACHE_DIR=/root/.triton   -e HF_TOKEN="${HF_TOKEN:-}"   -e FLASHINFER_CUDA_ARCH_LIST="12.1f"   -e CUTE_DSL_ARCH="sm_120a"   -e PYTHONUNBUFFERED=1   -v "${HF_HOME}:/root/.cache/huggingface"   -v "${TRITON_CACHE_DIR}:/root/.triton"   "${EAGLE_IMAGE}"   python3 -m sglang.launch_server   --model-path "${TARGET_MODEL}"   --revision "${TARGET_REV}"   --served-model-name "${SERVED_MODEL_NAME}"   --trust-remote-code   --mem-fraction-static "${MEM_FRACTION}"   --attention-backend flashinfer   --chunked-prefill-size "${CHUNKED_PREFILL}"   --max-prefill-tokens "${CHUNKED_PREFILL}"   --disable-prefill-cuda-graph   --kv-cache-dtype fp8_e4m3   --mamba-ssm-dtype bfloat16   --mamba-full-memory-ratio 4.21   --mamba-radix-cache-strategy extra_buffer_lazy   --max-mamba-cache-size "${MAMBA_CACHE_SIZE}"   --max-running-requests "${MAX_CONCURRENT_REQUESTS}"   --max-total-tokens "${MAX_TOTAL_TOKENS}"   --context-length "${CONTEXT_LENGTH}"   --speculative-algorithm EAGLE   --speculative-num-steps "${SPEC_STEPS}"   --speculative-eagle-topk "${SPEC_TOPK}"   --speculative-num-draft-tokens "${SPEC_DRAFT}"   --speculative-attention-mode "${SPEC_ATTENTION_MODE}"   --enable-linear-replayssm-spec   --enable-torch-compile   --torch-compile-max-bs "${TORCH_COMPILE_MAX_BS}"   --num-continuous-decode-steps "${CONTINUOUS_DECODE_STEPS}"   --cuda-graph-max-bs-decode "${CUDA_GRAPH_MAX_BS}"   --reasoning-parser qwen3   --tool-call-parser qwen3_coder   --sampling-defaults model   --enable-metrics   --enable-cache-report   --sleep-on-idle   "${PRIORITY_ARGS[@]}"   --host "${HOST}"   --port "${PORT}"   >/dev/null
 
 container_id="$(docker inspect -f '{{.Id}}' "${CONTAINER_NAME}")"
 echo "${container_id}" > "${PID_FILE}"
@@ -179,13 +131,21 @@ log_follow_pid=$!
 
 echo "Waiting for HTTP readiness at ${READY_URL}"
 heartbeat=0
-until curl -fsS "${READY_URL}" >/dev/null 2>&1; do
+max_probes=180
+probe=0
+until curl -fsS "${READY_URL}" >/dev/null 2>&1 || curl -fsS "${HEALTH_URL}" >/dev/null 2>&1; do
   if ! docker ps --format '{{.Names}}' | grep -qx "${CONTAINER_NAME}"; then
     echo "SGLang container exited before becoming ready"
     tail -n 200 "${LOG_FILE}" || true
     exit 1
   fi
-  if (( heartbeat % 6 == 0 )); then echo "  still starting..."; fi
+  probe=$((probe + 1))
+  if (( probe > max_probes )); then
+    echo "Timeout waiting for SGLang readiness after ${max_probes} probes (15 minutes)."
+    tail -n 200 "${LOG_FILE}" || true
+    exit 1
+  fi
+  if (( heartbeat % 6 == 0 )); then echo "  still starting... (probe ${probe}/${max_probes})"; fi
   heartbeat=$((heartbeat + 1))
   sleep 5
 done

@@ -39,11 +39,19 @@ files=(
 
 mkdir -p "${stage}/overlay/sglang"
 cp -r "${overlay}/sglang/." "${stage}/overlay/sglang/"
+if [[ -d "${overlay}/test" ]]; then
+  mkdir -p "${stage}/overlay/test"
+  cp -r "${overlay}/test/." "${stage}/overlay/test/"
+fi
+
 {
   echo "FROM ${base_image}"
   for rel in "${files[@]}"; do
     echo "COPY overlay/sglang/${rel} /sgl-workspace/sglang/python/sglang/${rel}"
   done
+  if [[ -d "${overlay}/test" ]]; then
+    echo "COPY overlay/test /sgl-workspace/sglang/test"
+  fi
   echo 'LABEL org.opencontainers.image.description="Pinned Qwen3.8 SM121 base + qualified DFlash 2 selector-capture overlay"'
   echo 'LABEL io.0xwhitemage.dflash2.upstream="sgl-project/sglang#35371,#35496"'
 } > "${stage}/Dockerfile"

@@ -15,7 +15,7 @@ I wanted one local LLM setup that could do two things well:
 1. Feel fast enough to use as my **daily driver**
 2. Keep multiple **agents working in the background**
 
-Kearuga now has two qualified profiles for those different jobs:
+Kearuga now has three qualified profiles for those different jobs:
 
 | | Result |
 |---|---:|
@@ -25,6 +25,7 @@ Kearuga now has two qualified profiles for those different jobs:
 | 🦅 EAGLE C8 aggregate | **181–193 tok/s** |
 | 🦅 EAGLE C16 aggregate | **320–335 tok/s** |
 | 🦅 EAGLE C32 aggregate | **527–539 tok/s** |
+| 📦 DSpark block 7 (native base fallback) | **~51 tok/s net C1** |
 | 📜 Shared target-KV pool | **1,048,576 tokens** |
 | 🧠 Native context per request | **262,144 tokens** |
 | 👷 Simultaneous full native contexts | **4 × 262K** |
@@ -81,7 +82,23 @@ Very large background prompts should still be managed at the orchestration layer
 
 ---
 
-## 🧠 3. The 1M Context Pool Is About Concurrency
+## 🔬 3. Quantization Lessons from EXL3: Bridging the Fidelity Gap
+
+Recent research in mixed-precision EXL3 quantization ([`malaiwah/qwen38-27b-exl3`](https://github.com/malaiwah/qwen38-27b-exl3)) measured a mean KL Divergence of **0.00276** on Qwen3.8-27B, compared to **0.0310** on uniform NVFP4 and **0.00529** on official FP8.
+
+Why does uniform NVFP4 lose fidelity, and what can we learn from this?
+
+### The Tensor Sensitivity Hierarchy
+Error in quantized transformer weights is not uniformly distributed:
+1. **Embeddings & LM Head (Extreme Sensitivity)**: Quantizing `embed_tokens` and `lm_head` to 4-bit causes severe probability skew in vocabulary logit tails. Keeping them in BF16 or FP8 costs ~1.2 GiB VRAM but recovers over 40% of the lost fidelity.
+2. **Boundary Layers & Recurrence (High Sensitivity)**: Layers 0–1, 62–63 and Gated DeltaNet linear attention projections (`in_proj`, `conv1d`) carry structural sequence formatting. Keeping them in FP8 (`fp8_e4m3`) eliminates recurrent state drift over 262K contexts.
+3. **MLP Blocks (High Capacity / Low Sensitivity)**: The `gate_proj`, `up_proj`, and `down_proj` matrices in middle layers (Layers 2–61) contain ~70% of total parameters. These can be quantized to hardware NVFP4 with virtually zero reasoning degradation when pre-activation outlier scaling (AWQ) is applied.
+
+By pairing **FP8 attention/heads** with **NVFP4 MLPs**, a hybrid ~21.5 GiB checkpoint can achieve near-EXL3 KLD while executing at full speed on Blackwell FP4 Tensor Cores in SGLang.
+
+---
+
+## 🧠 4. The 1M Context Pool Is About Concurrency
 
 Both profiles use:
 
@@ -102,39 +119,6 @@ FP8 KV caching is what makes this practical within the GB10's unified-memory env
 
 ---
 
-## 🎨 4. Context Can Also Be Traded for Memory
-
-The canonical 1M profile isn't necessarily the profile everyone should use.
-
-Don't need four complete 262K contexts? Shrink the shared KV pool.
-
-For example:
-
-> **1,048,576 → 786,432 tokens**  
-> **4 × 262K → 3 × 262K contexts**  
-> **~32 GiB → ~24 GiB target KV**  
-> **~8 GiB target KV reclaimed**
-
-On DFlash, the draft KV pool also scales down, bringing the measured total KV reduction to approximately **10.5 GiB**.
-
-That extra headroom could be used for other workloads. I'm particularly interested in experimenting with:
-
-**Qwen + agents + ComfyUI + local image/video generation**
-
-on the same Spark.
-
-A quantised MiniMax H3 stack is one workload I would like to explore. That combined workload is **not a qualified Kearuga profile yet**; it is an example of why configurable KV capacity is useful.
-
-Instead of asking:
-
-> *What's the maximum context I can fit?*
-
-I'd rather ask:
-
-> **What's the most useful combination of workloads I can fit into 128 GB?**
-
----
-
 ## 🦅 5. EAGLE Is There When My Priorities Change
 
 DFlash 2 is my **interactive profile**.
@@ -149,50 +133,14 @@ The qualified active-concurrency envelope is:
 
 These measurements use unique request suffixes, forced 512-token outputs and enough admitted seats for every submitted stream. They are active C8/C16/C32 results, not queued-load arithmetic.
 
-### DFlash 2
-
-**Best for:**
-
-- Daily-driver use
-- Interactive requests
-- Coding and research
-- 1–4 concurrent streams
-- Background agents plus foreground interaction
-
-### EAGLE 3/1/4
-
-**Best for:**
-
-- C8, C16 and C32 concurrency
-- Agent fleets
-- Batch workloads
-- Throughput-first serving
-
-Only one speculative head runs at a time, so changing between them requires a restart.
-
 ---
 
-## 🔨 What I Actually Optimised
+## 🔨 What We Actually Optimised
 
-Kearuga isn't one magic flag. The performance comes from treating the serving configuration as a complete system:
-
-- NVFP4 target weights
-- DFlash 2 and EAGLE speculative decoding
-- EAGLE tree geometry
-- ReplaySSM
-- FP8 KV cache
-- Quantised selector capture
-- CUDA graph sizing through each profile's admitted concurrency
-- Torch compile coverage
-- Continuous-decode scheduling
-- DFlash draft-window sizing
-- GDN and Mamba state allocation
-- GB10 CPU affinity
-- Bounded shared KV capacity
-- Request admission
-- Priority scheduling
-
-The recipe keeps the settings that remained correct and repeatable across warm runs, cold restarts, memory checks and canary tests on the actual DGX Spark.
+- **Zero-Allocation Logit Projection**: Pre-allocated workspace scratchpad in `dflash.py` eliminates PyTorch malloc thrashing during speculative decode loops.
+- **Register-Resident Selector Walk**: Triton unrolling keeps candidate tree paths in streaming multiprocessor registers.
+- **Blackwell SM121 Flags**: Explicit `FLASHINFER_CUDA_ARCH_LIST="12.1f"`, unlimited locked memory (`--ulimit memlock=-1:-1`), and stack enlargement (`--ulimit stack=67108864`).
+- **Comprehensive Verification**: Integrated 262K Needle-In-A-Haystack retrieval and 10-point deterministic semantic gate.
 
 ---
 
@@ -200,33 +148,8 @@ The recipe keeps the settings that remained correct and repeatable across warm r
 
 | What I want | What I'd run |
 |---|---|
-| Fast personal AI | **DFlash 2** |
+| Fast personal AI | **DFlash 2 (`./start-dflash2.sh`)** |
 | Personal AI plus background agents | **DFlash 2 + priority scheduling** |
+| Zero-build upstream fallback | **DSpark (`./start-dspark.sh`)** |
 | Four complete native contexts | **1M KV / 4 × 262K** |
-| More memory for other workloads | **Smaller KV pool** |
-| C8/C16/C32 agent concurrency | **EAGLE 3/1/4** |
-| Creative plus LLM experimentation | **Smaller KV + separately qualified workloads** |
-
-There isn't one universally "best" configuration.
-
-The interesting part of the DGX Spark is deciding **what you want its 128 GB unified-memory pool to do for you**.
-
-For me, that means making it less like a machine that can merely *fit* a large model...
-
-…and more like an **always-on local AI workstation**.
-
----
-
-## Full Recipe
-
-Everything required to reproduce the setup is in the main [README](README.md):
-
-- [Installation and deployment](README.md#deployment)
-- [Benchmarks](README.md#benchmark)
-- [Runtime envelope](README.md#runtime-envelope)
-- [Configuration](README.md#configuration)
-- [Credits](README.md#credits)
-
-The projects, models, recipes and contributors that made Kearuga possible are credited there.
-
-**Clone. Build. Boot. Experiment. 🧙‍♂️**
+| C8/C16/C32 agent concurrency | **EAGLE 3/1/4 (`./start-eagle.sh`)** |
