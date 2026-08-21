@@ -7,3 +7,11 @@ __pycache__/
 .cache/
 .hermes/
 bench/results/
+
+# Local Models & Large Weights (Keep out of git code tracking)
+models/
+tools/models/
+*.safetensors
+*.bin
+*.pt
+*.pth

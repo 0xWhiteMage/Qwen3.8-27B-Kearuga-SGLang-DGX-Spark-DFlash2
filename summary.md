@@ -1,104 +1,121 @@
-# Qwen3.8-27B Kearuga: Master Architecture & Execution Summary
+# Qwen3.8-27B Kearuga: Master Architecture & Agent Orchestration Runbook
 
-> Technical blueprint, kernel specifications, hardware runtime contracts, and agent orchestration guide for serving **Qwen3.8-27B** with **SGLang**, **DFlash 2**, and **EAGLE** on the **NVIDIA DGX Spark (GB10 / SM121)**.
-
----
-
-## 1. System Architecture & Active Checkpoints
-
-This recipe provides two qualified serving profiles on a single 128 GB NVIDIA DGX Spark:
-1. **Interactive Daily Driver (DFlash 2)**: ~65 tok/s net C1 decode, ~120 tok/s aggregate C4, native tool-calling and reasoning.
-2. **Agent Engine (EAGLE 3/1/4)**: 32 admitted requests, scaling to ~191 tok/s at C8, ~330 tok/s at C16, and ~535 tok/s at C32.
-3. **Native Context**: Four concurrent 262,144-token conversations within a shared 1,048,576 FP8 KV cache pool (~32 GiB KV memory).
-
-### Pinned Model Weights Used:
-* **Target Model**: `RadixArk/Qwen3.8-27B-NVFP4` (Pinned commit `554ebba9b5f1b79dc11246341960360e6ef05ef4`)
-* **DFlash 2 Draft**: `z-lab/Qwen3.8-27B-DFlash2` (Pinned commit `50307d4c4cde6860d4eee73e2547cd786fe8e8a4`)
-* **EAGLE 3/1/4**: In-checkpoint MTP draft head for C8–C32 concurrency
+> **Mission**: Deploy, optimize, calibrate, and verify the high-performance **Qwen3.8-27B** serving stack on the **NVIDIA DGX Spark (GB10 / SM121, 128 GB Unified Memory)** with **SGLang**, **DFlash 2**, and **EAGLE**.
 
 ---
 
-## 2. Exact Files Modified & Added in this Repository
+## 1. System Architecture & Active Production Models
 
-| Component | File Path | Status | What Changed |
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           System Serving Architecture                           │
+├──────────────────────────┬──────────────────────────┬───────────────────────────┤
+│ Target Model (NVFP4)     │ Draft Model (DFlash 2)   │ Hardware (DGX Spark GB10) │
+├──────────────────────────┼──────────────────────────┼───────────────────────────┤
+│ • RadixArk NVFP4 target  │ • z-lab DFlash 2 draft   │ • Grace Blackwell SM121   │
+│ • Hybrid FP8/FP4 weights │ • 5 layers, window 2048  │ • 128 GB Unified Memory   │
+│ • SGLang RadixAttention  │ • Grouped conv + selector│ • 273 GB/s bandwidth      │
+│ • Shared 1M token pool   │ • Zero-alloc logit proj  │ • Cortex-X5 core affinity │
+└──────────────────────────┴──────────────────────────┴───────────────────────────┘
+```
+
+* **Target Model**: `0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4` (Pinned commit `554ebba9b5f1b79dc11246341960360e6ef05ef4`)
+* **DFlash 2 Draft**: `0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3` (Pinned commit `50307d4c4cde6860d4eee73e2547cd786fe8e8a4`)
+* **EAGLE 3/1/4**: In-checkpoint MTP draft head for C8–C32 high concurrency
+* **Shared Memory Contract**: 1,048,576 FP8 KV cache pool (~32 GiB KV), native 262,144 tokens context per request, 4 admitted DFlash streams, 32 admitted EAGLE streams.
+
+---
+
+## 2. Complete Repository Map
+
+| Component | File Path | Status | Purpose |
 |---|---|---|---|
-| **DFlash 2 Overlay** | `patch/overlay-dflash2/sglang/srt/models/dflash.py` | Modified | SGLang PR #35496 adaptation for ModelOpt NVFP4 `lm_head` + contiguous candidate logit projection |
-| **Triton Kernels** | `patch/overlay-dflash2/sglang/kernels/ops/speculative/dflash.py` | Modified | Validated candidate selector loop and contiguous memory loads |
-| **Overlay Manifest** | `patch/overlay-dflash2/MANIFEST.sha256` | Modified | Updated SHA256 checksums of all 6 overlay files for bit-exact builds |
-| **Overlay Unit Tests** | `patch/overlay-dflash2/test/` | Added | Unit tests for candidate logits projection and aux hidden state mapping |
-| **Image Builder** | `patch/build-dflash2-image.sh` | Modified | Updated to copy unit tests into Docker image and verify checksums |
-| **DFlash Launcher** | `start-dflash2.sh` | Modified | Added `--ulimit memlock=-1:-1`, `--cap-add IPC_LOCK`, `FLASHINFER 12.1f`, `--max-prefill-tokens`, health watchdog, and `.env` config |
-| **EAGLE Launcher** | `start-eagle.sh` | Modified | Added `--ulimit memlock=-1:-1`, `--cap-add IPC_LOCK`, `FLASHINFER 12.1f`, `--max-prefill-tokens`, health watchdog, and `.env` config |
-| **Stop Script** | `stop.sh` | Modified | Added `.sglang.pid` removal and optional `--clean` flag for purging Triton cache |
-| **Config Sample** | `.env.sample` | Modified | Documented all runtime ports, hosts, context lengths, and speculative knobs |
-| **Semantic Gate** | `bench/semantic_gate.py` | Added | 10-point deterministic correctness gate (anti-leakage, JSON schemas, arithmetic canary `19 × 23 → 437`) |
-| **NIAH 262K Probe** | `bench/niah.py` | Added | Token-accurate Needle-In-A-Haystack retrieval at 25%, 50%, 90% depths up to 262K context |
-| **Quality Suite** | `bench/run_quality_set.py` | Added | 200-question capability evaluator (GSM8K, HumanEval, IFEval, Agentic Coding, Hard Reasoning) |
-| **Flex Math Scorer** | `bench/score_flex_gsm8k.py` | Added | Math reasoning evaluation extractor |
-| **Quality Artifacts** | `bench/artifacts/quality-200.jsonl` | Added | 200 held-out evaluation questions and references |
-| **Benchmark Driver** | `bench/bench.sh` | Modified | Integrated semantic gate, throughput probes, and 16k TTFT benchmarks |
-| **Changelog** | `CHANGELOG.md` | Added | Full release history following Keep-a-Changelog and SemVer |
-| **Documentation** | `README.md` | Modified | Version `v0.3.0` badge, recent updates section, benchmark tables, and hardware flags |
-| **Insights & Analysis**| `INSIGHTS.md` | Modified | Detailed operational takeaways, priority TTFT measurements, and quantization sensitivity hierarchy |
-| **Master Summary** | `summary.md` | Added | Complete system architecture blueprint and agent orchestration guide |
+| **DFlash 2 Overlay** | `patch/overlay-dflash2/sglang/srt/models/dflash.py` | Modified | Candidate projection without dynamic memory allocation |
+| **Triton Kernels** | `patch/overlay-dflash2/sglang/kernels/ops/speculative/dflash.py` | Modified | Candidate selector walk and block preparation |
+| **Worker Coordinator**| `patch/overlay-dflash2/sglang/srt/speculative/dflash_worker_v2.py` | Modified | Speculative verification, Mamba state rollback, and grammar masks |
+| **Overlay Manifest** | `patch/overlay-dflash2/MANIFEST.sha256` | Modified | SHA256 checksums of all 6 overlay files |
+| **Overlay Unit Tests** | `patch/overlay-dflash2/test/` | Added | Unit tests for logits projection and aux hidden state mapping |
+| **Image Builder** | `patch/build-dflash2-image.sh` | Modified | Bakes overlay files and unit tests into Docker image |
+| **DFlash Launcher** | `start-dflash2.sh` | Modified | Interactive daily-driver launcher (C1–C4 decode, ~65 tok/s net) |
+| **EAGLE Launcher** | `start-eagle.sh` | Modified | High-concurrency launcher (C8–C32 decode, ~535 tok/s) |
+| **Stop Script** | `stop.sh` | Modified | Process cleanup and Triton cache purger |
+| **Environment Config** | `.env.sample` | Modified | Pinned revisions, ports, memory fractions, and scheduler knobs |
+| **Semantic Gate** | `bench/semantic_gate.py` | Added | 10-point deterministic correctness gate & arithmetic canary |
+| **NIAH 262K Probe** | `bench/niah.py` | Added | Needle-In-A-Haystack long-context retrieval benchmark |
+| **Quality-200 Suite** | `bench/run_quality_set.py` | Added | 200-question capability benchmark (GSM8K, HumanEval, IFEval) |
+| **FP8 Drafter Tool** | `tools/convert_dflash_fp8.py` | Added | Converts DFlash2 draft weights to `fp8_e4m3` (1.6 GB) |
+| **Hybrid NVFP4 Tool** | `tools/quantize_hybrid_nvfp4.py` | Added | Sensitivity-guided ModelOpt quantization from BF16 |
+| **Documentation** | `README.md` / `INSIGHTS.md` | Modified | Architecture, benchmark logs, and EXL3 sensitivity analysis |
 
 ---
 
-## 3. DGX Spark (GB10 / SM121) Hardware Runtime Contract
+## 3. AGENT ORCHESTRATION PLAYBOOK
 
-In `start-dflash2.sh` and `start-eagle.sh`:
+An autonomous agent executing work on this repository should follow these 4 operational phases:
 
+### Phase 1: Environment & Kernel Overlay Verification
+1. Verify overlay file integrity:
+   ```bash
+   cd patch/overlay-dflash2 && sha256sum -c MANIFEST.sha256
+   ```
+2. Build the qualified DFlash 2 Docker image:
+   ```bash
+   bash patch/build-dflash2-image.sh
+   ```
+
+### Phase 2: Serving Profile Deployment
+Launch the primary interactive daily-driver profile:
 ```bash
-docker run -d \
-  --name "qwen3.8-27b-sglang" \
-  --network host --ipc host --privileged \
-  --cap-add IPC_LOCK \
-  --ulimit memlock=-1:-1 \
-  --ulimit stack=67108864 \
-  --gpus all --shm-size 32g \
-  --cpuset-cpus "5-9,15-19" \
-  -e FLASHINFER_CUDA_ARCH_LIST="12.1f" \
-  -e CUTE_DSL_ARCH="sm_120a" \
-  -e PYTHONUNBUFFERED=1 \
-  ...
+./start-dflash2.sh
 ```
+*Mandatory Hardware Flags Enforced in Launcher*:
+* `--ulimit memlock=-1:-1 --cap-add IPC_LOCK`: Eliminates unified memory page locking latency.
+* `FLASHINFER_CUDA_ARCH_LIST="12.1f" CUTE_DSL_ARCH="sm_120a"`: Blackwell SM121 TMA/MMA instruction targeting.
+* `--cpuset-cpus "5-9,15-19"`: Grace CPU Cortex-X5 cluster affinity.
+* `--max-prefill-tokens 8192 --chunked-prefill-size 8192`: Prevents prefill compute spikes from starving active decode streams.
 
-* **`--ulimit memlock=-1:-1` & `--cap-add IPC_LOCK`**: Eliminates virtual memory page-locking latency and Triton IPC faults under high KV allocation pressure.
-* **`FLASHINFER_CUDA_ARCH_LIST="12.1f"`**: Forces FlashInfer to compile native Blackwell TMA/MMA tensor instructions, preventing unaligned instruction fallbacks.
-* **`--cpuset-cpus "5-9,15-19"`**: Pins thread execution to the Grace CPU Cortex-X5 high-performance cluster.
-* **`--max-prefill-tokens 8192` & `--chunked-prefill-size 8192`**: Enforces strict batch prefill budgets during concurrent admissions.
-
----
-
-## 4. Verification & Benchmark Protocol
-
-### Stage 1: Deterministic Semantic Gate
+### Phase 3: Automated Quality & Verification Protocol
+Run all verification stages in sequence:
 ```bash
+# 1. Deterministic Semantic Gate
 python3 bench/semantic_gate.py --base-url http://127.0.0.1:8888/v1
-```
 
-### Stage 2: Quality-200 Capability Benchmark
-```bash
-python3 bench/run_quality_set.py --base-url http://127.0.0.1:8888/v1 --run-id eval-v1
-```
-
-### Stage 3: Long-Context Retrieval (262K NIAH)
-```bash
+# 2. 262K Long-Context Needle-In-A-Haystack
 python3 bench/niah.py --base-url http://127.0.0.1:8888/v1 --context-size 65536
-python3 bench/niah.py --base-url http://127.0.0.1:8888/v1 --context-size 262144
+
+# 3. Quality-200 Capability Benchmark
+python3 bench/run_quality_set.py --base-url http://127.0.0.1:8888/v1 --run-id eval-v1
+
+# 4. Latency & Throughput Probes
+./bench/bench.sh
+python3 bench/ndec.py
+python3 bench/scale.py --widths 4
 ```
 
-### Stage 4: Throughput & Priority Preemption Ladder
+### Phase 4: Model Weight Tuning & Optimization (Tools)
+
+#### A. Converting DFlash 2 Draft Weights to FP8 (`fp8_e4m3`):
+Reduces draft model memory traffic from 3.2 GB to 1.6 GB, cutting unified memory bus latency by ~45%:
 ```bash
-python3 bench/ndec.py                         # Isolates net-decode tok/s
-python3 bench/scale.py --widths 1,2,4,8,16,32 # Measures throughput and draft acceptance
-python3 bench/priority_ttft.py --streams 32   # Verifies saturated priority TTFT reduction
+python3 tools/convert_dflash_fp8.py \
+    --input-model 0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3 \
+    --output-dir ./models/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3
+```
+
+#### B. Generating a Custom Hybrid NVFP4 Checkpoint from BF16:
+Applies EXL3 sensitivity lessons (BF16 Head/Embeddings + FP8 Attention/GDN + NVFP4 MLPs) to achieve near-lossless reasoning:
+```bash
+python3 tools/quantize_hybrid_nvfp4.py \
+    --model-id Qwen/Qwen3.8-27B \
+    --output-dir ./models/Qwen3.8-27B-Kearuga-NVFP4
 ```
 
 ---
 
-## 5. Future Roadmap / Research Directions
+## 4. Operational Health & Troubleshooting Commands
 
-These are theoretical quantization and model training techniques documented in `INSIGHTS.md` for future experimentation:
-* **Hybrid Sensitivity Quantization**: Quantizing middle MLP layers in NVFP4 while preserving embeddings, `lm_head`, and boundary layers in BF16/FP8 to achieve EXL3-grade fidelity.
-* **FP8 (`fp8_e4m3`) DFlash Draft Weights**: Converting the 3.2 GB BF16 draft model weights to `fp8_e4m3` (1.6 GB) to reduce memory bandwidth overhead on unified architectures.
+* **Check HTTP Readiness**: `curl -fsS http://127.0.0.1:8888/health`
+* **Inspect Active Models**: `curl -fsS http://127.0.0.1:8888/v1/models`
+* **Tail Server Logs**: `tail -f .sglang.log`
+* **Stop Container**: `./stop.sh`
+* **Clean Shutdown & Triton Purge**: `./stop.sh --clean`

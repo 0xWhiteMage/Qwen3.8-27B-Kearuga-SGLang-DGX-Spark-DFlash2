@@ -4,6 +4,10 @@ All notable updates and improvements to the **Qwen3.8-27B Kearuga on DGX Spark**
 
 ---
 
+## [0.4.0] - 2026-08-22
+
+### Added
+
 ## [0.3.0] - 2026-08-21
 
 ### Added
