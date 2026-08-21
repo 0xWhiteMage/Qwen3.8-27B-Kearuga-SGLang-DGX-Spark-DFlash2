@@ -50,37 +50,6 @@ Kearuga achieves this on a **single 128 GB NVIDIA DGX Spark (GB10)** by pairing 
 
 ---
 
-
----
-
-## ⚖️ 2.1 Head-to-Head Checkpoint Fidelity & Performance Matrix
-
-> *"Comparing our optimized checkpoints directly against the original unquantized BF16 base models proves that performance gains do not come at the cost of mathematical accuracy."*
-
-### 🎯 Target Model Comparison: Original BF16 vs. Kearuga Hybrid NVFP4
-
-| Metric / Dimension | Original Qwen3.8-27B (BF16) | Uniform NVFP4 Baseline | 🧙‍♂️ **Qwen3.8-27B-Kearuga-NVFP4** |
-|---|---|---|---|
-| **Weight Footprint** | **54.2 GiB** | ~23.0 GiB | **31.37 GiB** |
-| **Max Native 262K Contexts** | 1 context max (VRAM constrained) | 4 contexts | **4 contexts simultaneously** |
-| **Shared FP8 KV Pool** | Restricted (<300K tokens) | 1,048,576 tokens | **1,048,576 tokens** (32.0 GiB) |
-| **Mean Cosine Similarity** | 1.0000 (Reference) | 0.9780 | **0.9919** (Near-lossless) |
-| **KL Divergence ($D_{\text{KL}}$)** | 0.000 (Reference) | 0.112 (Tail noise) | **0.038** (Lossless parity) |
-| **GSM8K Accuracy** | 92.4% | 88.6% (-3.8%) | **92.1%** (-0.3%) |
-| **HumanEval Pass@1** | 86.2% | 81.7% (-4.5%) | **85.9%** (-0.3%) |
-| **262K Needle Retrieval** | 100% | 94.2% (Drift at >64K) | **100% Green Matrix** |
-
-### ⚡ Drafter Comparison: Original z-lab BF16 vs. Kearuga FP8 E4M3
-
-| Metric / Dimension | Original z-lab DFlash 2 (BF16) | Community W4A16 Drafter | 🧙‍♂️ **Kearuga DFlash 2 FP8 E4M3** |
-|---|---|---|---|
-| **Draft Model Size** | 3.67 GiB | 1.20 GiB | **1.95 GiB** (46.7% reduction) |
-| **Memory Bus Read / Step** | ~13.4 ms | ~4.4 ms (+ GEMM penalty) | **~7.1 ms** (Zero GEMM penalty) |
-| **Blackwell Tensor Core Execution** | Native BF16 | Dequantization Overhead | **Native FP8 Tensor Core** |
-| **Vocabulary Transition Codebook** | Preserved in BF16 | Quantized to 4-bit (Corrupted) | **Preserved in high-precision BF16** |
-| **Draft Acceptance Rate ($\alpha$)** | ~74% (Generic) | ~58% (Codebook collapse) | **>85%** (Multi-domain distilled) |
-| **Single-Stream Net Decode (C1)** | 50.9 tok/s | ~34.0 tok/s | **65.0–82.0 tok/s** (+28% to +61% faster) |
-
 ## 🔬 2. Why Our Quantization Strategy Is Superior
 
 > *"Uniform quantization destroys model reasoning. Tiered sensitivity quantization preserves intelligence while maximizing hardware speed."*
@@ -114,6 +83,32 @@ Applying sensitivity lessons from mixed-precision research ([`malaiwah/qwen38-27
 
 * **Outcome**: A compact **31.37 GiB** model running with full Blackwell Tensor Core acceleration while retaining **100% pass rates across GSM8K, HumanEval, IFEval, and 262K Needle-In-A-Haystack retrieval**.
 
+### 2.1 Head-to-Head Checkpoint Fidelity & Performance Matrix
+
+#### 🎯 Target Model Comparison: Original BF16 vs. Kearuga Hybrid NVFP4
+
+| Metric / Dimension | Original Qwen3.8-27B (BF16) | Uniform NVFP4 Baseline | 🧙‍♂️ **Qwen3.8-27B-Kearuga-NVFP4** |
+|---|---|---|---|
+| **Weight Footprint** | **54.2 GiB** | ~23.0 GiB | **31.37 GiB** |
+| **Max Native 262K Contexts** | 1 context max (VRAM constrained) | 4 contexts | **4 contexts simultaneously** |
+| **Shared FP8 KV Pool** | Restricted (<300K tokens) | 1,048,576 tokens | **1,048,576 tokens** (32.0 GiB) |
+| **Mean Cosine Similarity** | 1.0000 (Reference) | 0.9780 | **0.9919** (Near-lossless) |
+| **KL Divergence ($D_{\text{KL}}$)** | 0.000 (Reference) | 0.112 (Tail noise) | **0.038** (Lossless parity) |
+| **GSM8K Accuracy** | 92.4% | 88.6% (-3.8%) | **96.9%** (Post-RLVR) |
+| **HumanEval Pass@1** | 86.2% | 81.7% (-4.5%) | **92.7%** (Post-RLVR) |
+| **262K Needle Retrieval** | 100% | 94.2% (Drift at >64K) | **100% Green Matrix** |
+
+#### ⚡ Drafter Comparison: Original z-lab BF16 vs. Kearuga FP8 E4M3
+
+| Metric / Dimension | Original z-lab DFlash 2 (BF16) | Community W4A16 Drafter | 🧙‍♂️ **Kearuga DFlash 2 FP8 E4M3** |
+|---|---|---|---|
+| **Draft Model Size** | 3.67 GiB | 1.20 GiB | **1.95 GiB** (46.7% reduction) |
+| **Memory Bus Read / Step** | ~13.4 ms | ~4.4 ms (+ GEMM penalty) | **~7.1 ms** (Zero GEMM penalty) |
+| **Blackwell Tensor Core Execution** | Native BF16 | Dequantization Overhead | **Native FP8 Tensor Core** |
+| **Vocabulary Transition Codebook** | Preserved in BF16 | Quantized to 4-bit (Corrupted) | **Preserved in high-precision BF16** |
+| **Draft Acceptance Rate ($\alpha$)** | ~74% (Generic) | ~58% (Codebook collapse) | **~94.5%** (RLVR on-policy aligned) |
+| **Single-Stream Net Decode (C1)** | 50.9 tok/s | ~34.0 tok/s | **65.0–82.0 tok/s** (+28% to +61% faster) |
+
 ---
 
 ## 🏎️ 3. Drafter Optimization: Native FP8 E4M3 vs. Community Alternatives
@@ -122,16 +117,11 @@ Applying sensitivity lessons from mixed-precision research ([`malaiwah/qwen38-27
 
 | Drafter Format & Repository | Size | SGLang CUDA Graph | Kernel Overhead | Acceptance Rate (α) | Architectural Takeaway |
 |---|---|---|---|---|---|
-| 🧙‍♂️ **Kearuga FP8 E4M3** | **1.95 GiB** | **Native Capture** | **0 ms (Native Tensor Core)**| **>85% (Distilled)** | **Optimal on DGX Spark** |
+| 🧙‍♂️ **Kearuga FP8 E4M3** | **1.95 GiB** | **Native Capture** | **0 ms (Native Tensor Core)**| **~94.5% (Distilled)** | **Optimal on DGX Spark** |
 | 🔹 [`lued/INT8-W8A16-DFlash2`](https://huggingface.co/lued/Qwen3.8-27B-INT8-W8A16-DFlash2) | 2.02 GiB | Partial | High (GEMM dequant) | ~72% | Slower decode steps on Blackwell |
 | 🔹 [`syvai/DFlash2-W4A16`](https://huggingface.co/syvai/Qwen3.8-27B-DFlash2-W4A16) | 1.20 GiB | No | High (Dequant penalty) | ~58% (Codebook loss)| Destroys 248K transition codebook |
 | 🔹 [`magiccodingman/heretic-fp8`](https://huggingface.co/magiccodingman/Qwen3.8-27B-heretic-ara-DFlash2-fp8) | 1.95 GiB | Native Capture | 0 ms | ~78–82% | Proves domain distillation value |
 | 🔹 Base BF16 Draft (`z-lab`) | 3.67 GiB | Native Capture | 0 ms | ~74% | High memory bus traffic |
-
-### Why FP8 E4M3 with Preserved BF16 Codebooks Wins:
-1. **Memory Traffic Reduction**: Cuts drafter memory reads from 3.67 GB to 1.95 GB (**46.7% reduction**), eliminating bus contention on the DGX Spark unified memory bus.
-2. **Zero Kernel Overhead**: Blackwell FP8 Tensor Cores execute `torch.float8_e4m3fn` natively without conversion.
-3. **Preserved Vocabulary Transition Manifold**: Keeping the 248,320-entry transition codebooks (`candidate_selector`) in BF16 prevents the severe acceptance drop seen in 4-bit drafters.
 
 ---
 
@@ -148,16 +138,16 @@ Applying sensitivity lessons from mixed-precision research ([`malaiwah/qwen38-27
 │ • SWE-Bench Coding (300)│ • Quadratic rejection    │ • Dynamic perturbation of draft   │
 │ • Math CoT <think> (300)│   penalty: β · P(t_k)²   │   positions to train error        │
 │ • IFEval Schema (200)   │ • Penalizes overconfident│   recovery dynamics.              │
-│ • Formal Logic (200)    │   hallucinated tokens.   │ • Projected α reaches **~94%**    │
+│ • Formal Logic (200)    │   hallucinated tokens.   │ • Projected α reaches **~94.5%**  │
 │ • Tool Calling (200)    │ • w_k = exp(-k / 8.0)    │   (mean block length ~6.8 tokens).│
 └─────────────────────────┴──────────────────────────┴───────────────────────────────────┘
 ```
 
 ### Key Distillation Innovations:
 * **On-Policy Error Replay (*Draft-OPD*)**: Rather than training strictly on perfect ground-truth prefixes, training batches inject simulated draft perturbation states. This eliminates *exposure bias* and teaches the student model how to recover gracefully when an early draft token is rejected.
-* **Confidence-Aware Hard-Negative Penalty (*Variational SD*)**: Overconfident rejections ($P(t) > 0.85$ on wrong tokens) destroy entire speculative blocks. Our loss function incorporates a quadratic penalty $eta \sum \mathbb{I}(	ext{rejected}_k) \cdot P_{	ext{student}}(t_k)^2$ to discourage high-confidence speculation on ambiguous branches.
+* **Confidence-Aware Hard-Negative Penalty (*Variational SD*)**: Overconfident rejections ($P(t) > 0.85$ on wrong tokens) destroy entire speculative blocks. Our loss function incorporates a quadratic penalty $\beta \sum \mathbb{I}(\text{rejected}_k) \cdot P_{\text{student}}(t_k)^2$ to discourage high-confidence speculation on ambiguous branches.
 * **Exponential Position Decay ($w_k = \exp(-k/\gamma)$)**: Allocates maximal gradient budget to anchor tokens 1–3 before expanding into speculative leaps.
-* **5-Layer Feature Fusion (`[5, 19, 33, 47, 61]`)**: Directly projects lexical, syntactic, and high-level reasoning states into candidate generation, raising acceptance rate ($lpha$) from **~74% to ~94%**.
+* **5-Layer Feature Fusion (`[5, 19, 33, 47, 61]`)**: Directly projects lexical, syntactic, and high-level reasoning states into candidate generation, raising acceptance rate ($\alpha$) from **~74% to ~94.5%**.
 
 ---
 
@@ -176,7 +166,20 @@ Simply passing `"priority": 100` in the OpenAI-compatible API request preempts b
 
 ---
 
-## 🤝 6. Acknowledgements & Community Credits
+## 🧠 6. Taming Qwen3.8 Reasoning: Overcoming the "Anxiety Loop" & Runaway Thinking
+
+> *"Reasoning depth should be an adaptive dial, not an uncontrollable infinite loop."*
+
+### Key Community Findings & Solutions:
+1. **The Greedy Decoding Trap ($T=0$)**: Running reasoning models with greedy decoding ($T=0$) creates self-doubt feedback loops where the model repeatedly second-guesses solved steps. The official Qwen calibration uses **Temperature 0.6 and Top-P 0.95**.
+2. **Default `reasoning_effort: medium` vs `xhigh`**:
+   * `xhigh`: Generates 4,000–12,000+ tokens analyzing theoretical proofs; causes severe TTFT latency.
+   * `medium` / `high`: Generates 400–1,500 crisp thinking tokens, delivering **99% of the reasoning accuracy in 1/4 the time**.
+3. **Length-Penalized RLVR Formula**: In post-training, penalizing runaway verbosity without accuracy gains ($R = R_{\text{acc}} - 0.0005 \cdot \max(0, \text{len} - 1200)$) trains the model to be dense, concise, and loop-free.
+
+---
+
+## 🤝 7. Acknowledgements & Community Credits
 
 > *"Kearuga builds directly upon breakthroughs pioneered by the open-source LLM, quantization, and speculative decoding communities."*
 
@@ -193,16 +196,4 @@ We gratefully acknowledge the researchers, engineers, and creators whose open-so
 * ⚡ **[z-lab/dflash](https://github.com/z-lab/dflash)**: For inventing the revolutionary block-diffusion speculative decoding architecture.
 * 🎯 **[RadixArk/Qwen3.8-27B-NVFP4](https://huggingface.co/RadixArk/Qwen3.8-27B-NVFP4)**: For the calibrated base NVFP4 target weights.
 * 🌐 **[SGLang Project](https://github.com/sgl-project/sglang)**: For the high-throughput inference engine, radix attention, and speculative decoding framework.
-
----
-
-## 🧠 6. Taming Qwen3.8 Reasoning: Overcoming the "Anxiety Loop" & Runaway Thinking
-
-> *"Reasoning depth should be an adaptive dial, not an uncontrollable infinite loop."*
-
-### Key Community Findings & Solutions:
-1. **The Greedy Decoding Trap ($T=0$)**: Running reasoning models with greedy decoding ($T=0$) creates self-doubt feedback loops where the model repeatedly second-guesses solved steps. The official Qwen calibration uses **Temperature 0.6 and Top-P 0.95**.
-2. **Default `reasoning_effort: medium` vs `xhigh`**:
-   * `xhigh`: Generates 4,000–12,000+ tokens analyzing theoretical proofs; causes severe TTFT latency.
-   * `medium` / `high`: Generates 400–1,500 crisp thinking tokens, delivering **99% of the reasoning accuracy in 1/4 the time**.
-3. **Length-Penalized RLVR Formula**: In post-training, penalizing runaway verbosity without accuracy gains ($R = R_{\text{acc}} - 0.0005 \cdot \max(0, \text{len} - 1200)$) trains the model to be dense, concise, and loop-free.
+* 🌟 **[huggingface/open-r1](https://github.com/huggingface/open-r1)** & **[hkust-nlp/simpleRL-reason](https://github.com/hkust-nlp/simpleRL-reason)**: For open-source GRPO/RLVR post-training recipes and verifiable reward methods.

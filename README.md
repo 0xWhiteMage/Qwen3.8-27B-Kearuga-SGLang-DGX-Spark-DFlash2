@@ -2,7 +2,7 @@
 
 <p align="center">
   <img src="assets/header.png" alt="The White Mage — Qwen3.8-27B Kearuga on DGX Spark with SGLang, DFlash 2 and EAGLE" width="100%"><br><br>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v0.4.0-blue.svg?style=for-the-badge" alt="Version 0.3.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v0.4.0-blue.svg?style=for-the-badge" alt="Version 0.4.0"></a>
   <a href="#-benchmarks"><img src="https://img.shields.io/badge/C1_Net_Decode-65--82_tok%2Fs-success.svg?style=for-the-badge" alt="C1 Net Decode"></a>
   <a href="#-benchmarks"><img src="https://img.shields.io/badge/C32_Aggregate-535_tok%2Fs-purple.svg?style=for-the-badge" alt="C32 Aggregate"></a>
   <a href="#-runtime-envelope"><img src="https://img.shields.io/badge/KV_Pool-1%2C048%2C576_Tokens-orange.svg?style=for-the-badge" alt="KV Pool"></a>
