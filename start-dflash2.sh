@@ -24,6 +24,9 @@ if [[ -f "${SCRIPT_DIR}/.env" ]]; then
     key="${key%$'\r'}"; value="${value%$'\r'}"
     key="${key#"${key%%[![:space:]]*}"}"; key="${key%"${key##*[![:space:]]}"}"
     [[ -z "${key}" || "${key}" == \#* ]] && continue
+    # Strip surrounding single or double quotes
+    value="${value#\"}" ; value="${value%\"}"
+    value="${value#\'}" ; value="${value%\'}"
     if [[ -z "${!key:-}" ]]; then
       export "${key}=${value}"
     fi
