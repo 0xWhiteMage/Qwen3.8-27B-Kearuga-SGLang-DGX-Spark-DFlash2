@@ -2,7 +2,7 @@
 
 <p align="center">
   <img src="assets/header.png" alt="The White Mage — Qwen3.8-27B Kearuga on DGX Spark with SGLang, DFlash 2 and EAGLE" width="100%"><br><br>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-v0.3.0-blue.svg?style=for-the-badge" alt="Version 0.3.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-v0.3.0-blue.svg?style=for-the-badge" alt="Version 0.3.0"></a><br><br>
   <a href="#benchmark"><strong>65 tok/s net C1</strong></a> ·
   <a href="#benchmark"><strong>120 tok/s C4 aggregate</strong></a> ·
   <a href="#runtime-envelope"><strong>4 × native 262K contexts</strong></a> ·
