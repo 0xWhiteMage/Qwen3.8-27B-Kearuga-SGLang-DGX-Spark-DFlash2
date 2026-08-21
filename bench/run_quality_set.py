@@ -26,14 +26,14 @@ def get_default_model(base: str) -> str:
         return "qwen3.8-27b-sglang"
 
 
-def chat(base: str, model: str, prompt: str, max_tokens: int) -> dict:
+def chat(base: str, model: str, prompt: str, max_tokens: int, reasoning_effort: str = "medium", temperature: float = 0.6) -> dict:
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0,
-        "top_p": 1,
+        "temperature": temperature,
+        "top_p": 0.95,
         "max_tokens": max_tokens,
-        "chat_template_kwargs": {"enable_thinking": False},
+        "chat_template_kwargs": {"reasoning_effort": reasoning_effort},
     }
     req = urllib.request.Request(
         base.rstrip("/") + "/chat/completions",
