@@ -175,8 +175,6 @@ python3 bench/scale.py --widths 4
 | `DFLASH_MODEL` | `0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3` | Retrained RLVR-aligned FP8 draft model (or local path) |
 | `CONTEXT_LENGTH` | `262144` | Full native 262K context window |
 | `MAX_TOTAL_TOKENS` | `1048576` | Shared FP8 KV pool capacity |
-| `FLASHINFER_CUDA_ARCH_LIST` | `"12.1f"` | Explicit Blackwell SM121 kernel JIT targeting |
-| `CUTE_DSL_ARCH` | `"sm_120a"` | Blackwell CuTe DSL hardware flag |
 | `CPU_AFFINITY` | `5-9,15-19` | Cortex-X5 performance core pinning |
 | `PRIORITY_SCHEDULING` | `priority: 100` | Preempts queues for interactive requests |
 
