@@ -19,7 +19,7 @@
 └──────────────────────────┴──────────────────────────┴───────────────────────────┘
 ```
 
-* **Target Model**: `0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4` (Pinned commit `96654b1a62b46000e405a31159cee023400e53d5`)
+* **Target Model**: `RadixArk/Qwen3.8-27B-NVFP4` (Pinned commit `554ebba9b5f1b79dc11246341960360e6ef05ef4`)
 * **DFlash 2 Draft**: `0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3` (Pinned commit `cd1f23d4ff625ac68ac08457331547e2edab3991`)
 * **EAGLE 3/1/4**: In-checkpoint MTP draft head for C8–C32 high concurrency
 * **Shared Memory Contract**: 1,048,576 FP8 KV cache pool (~32 GiB KV), native 262,144 tokens context per request, 4 admitted DFlash streams, 32 admitted EAGLE streams.
