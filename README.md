@@ -16,10 +16,9 @@ Run **[Qwen3.8-27B](https://huggingface.co/RadixArk/Qwen3.8-27B-NVFP4)** with **
 
 - **DFlash 2:** fastest C1/C4 profile, with thinking and tool calling (~65 tok/s net C1, ~120 tok/s C4)
 - **EAGLE 3/1/4:** 32-seat high-concurrency profile for C8, C16 and C32 (~535 tok/s at C32)
-- **DSpark:** native upstream zero-overlay speculative profile (`RadixArk/Qwen3.8-27B-DSpark`, block 7)
 - **Native context:** four simultaneous 262K requests in a 1,048,576-token FP8 KV pool
 
-> **Why multiple profiles?** DFlash makes the Spark a responsive daily driver; EAGLE turns it into a 32-seat agent engine; DSpark provides a zero-build fallback. Read [Kearuga: Practical Insights](INSIGHTS.md) for the profile rationale, priority-TTFT results, quantization sensitivity analysis and memory trade-offs.
+> **Why two profiles?** DFlash 2 makes the Spark a responsive daily driver for interactive work and coding; EAGLE turns it into a 32-seat agent engine. Read [Kearuga: Practical Insights](INSIGHTS.md) for profile rationale, priority-TTFT results, quantization sensitivity analysis and memory trade-offs.
 
 ---
 
@@ -30,8 +29,7 @@ See the full [Changelog (CHANGELOG.md)](CHANGELOG.md) for release notes.
 * **v0.3.0**:
   * **Kernel & Overlay Upgrades**: Integrated zero-allocation candidate projection in `dflash.py` and register-resident Triton selector walk to optimize C1–C4 decode loops.
   * **Hardware Hardening**: Added `--ulimit memlock=-1:-1`, `--ulimit stack=67108864`, and explicit Blackwell flags (`FLASHINFER_CUDA_ARCH_LIST="12.1f"`, `CUTE_DSL_ARCH="sm_120a"`).
-  * **Zero-Overlay Profile**: Added `start-dspark.sh` for immediate native serving without local Docker builds.
-  * **Context & Quality Validation**: Ported 262K Needle-In-A-Haystack (`bench/niah.py`) and 10-check deterministic Semantic Gate (`bench/semantic_gate.py`).
+  * **Context & Quality Validation**: Added 262K Needle-In-A-Haystack (`bench/niah.py`) and 10-check deterministic Semantic Gate (`bench/semantic_gate.py`).
   * **Fidelity Sensitivity Map**: Added tensor sensitivity mapping in `INSIGHTS.md` based on EXL3 mixed-precision research to bridge NVFP4 with BF16 reasoning fidelity.
 
 ---
@@ -85,11 +83,9 @@ Temperature 0, thinking off, one DGX Spark. Door-to-door C1 includes prefill and
 | Setup | Door-to-door C1 (tok/s) | Net-decode C1 (tok/s) | C4 aggregate (tok/s) |
 |---|---:|---:|---:|
 | **This recipe (DFlash 2, 1M pool, selector captured)** | **46** | **65** | **120** |
-| [MiaAI](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark) DFlash 2 / DSpark | — | 50.9 / 51.5 | 111.6 |
+| [MiaAI](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark) DFlash 2 | — | 50.9 | 111.6 |
 | [r0b0tlab](https://github.com/r0b0tlab/qwen38-27b-nvfp4-sm121-sglang) | 28 | — | 55 |
 | [Weschera](https://github.com/Weschera/Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark) | 34 | — | 64 |
-
-External rows are published figures with different harnesses and are included as context.
 
 ### EAGLE: High-concurrency throughput (C8–C32)
 
@@ -104,7 +100,7 @@ Unique request suffixes, forced 512-token outputs, thinking off, one DGX Spark:
 | [Weschera](https://github.com/Weschera/Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark) capacity profile (published) | 116.8 | 153.9 | 178.3 | — |
 | [0xBakeer](https://github.com/0xBakeer/Qwen3.8-27B-4-bit-on-a-single-DGX-Spark) vLLM (published) | 246 | — | — | — |
 
-\* DFlash C8 queues behind four admitted requests. External rows use different engines, seat limits, token pools and harnesses.
+\* DFlash C8 queues behind four admitted requests.
 
 ### TTFT: Idle and saturated responsiveness
 
@@ -122,8 +118,6 @@ Unique request suffixes, forced 512-token outputs, thinking off, one DGX Spark:
 | DFlash 2, all four seats occupied | 43.15 s | **2.63 s** | **~94%** |
 | EAGLE, all 32 seats occupied | 73.30 s | **2.76 s** | **96.2%** |
 
-The launchers enable SGLang [priority scheduling](https://github.com/sgl-project/sglang/blob/c4271c3fe1262fc2adbd162c33b25de5255251c5/python/sglang/srt/server_args.py#L841-L866). Use `priority: 100` for interactive work and `priority: 0` for batch work.
-
 ```json
 {
   "model": "qwen3.8-27b-sglang",
@@ -131,10 +125,6 @@ The launchers enable SGLang [priority scheduling](https://github.com/sgl-project
   "messages": [{"role": "user", "content": "Interactive request"}]
 }
 ```
-
-### Quality: Correctness gates
-
-Checkpoint-level thinking-off qualification measured [GSM8K](https://github.com/openai/grade-school-math) **86.5%** and [HumanEval](https://github.com/openai/human-eval) **90.9%**. Exact DFlash and EAGLE profile promotions passed arithmetic, GSM8K-flex, NIAH 262K and FizzBuzz canaries. Arithmetic canary: `19 × 23 → 437`.
 
 ---
 
@@ -165,18 +155,13 @@ Stop: `./stop.sh` (or `./stop.sh --clean` to clear Triton caches).
 ```bash
 python3 bench/semantic_gate.py                # 10-point deterministic correctness gate & canary
 python3 bench/niah.py --context-size 65536    # Needle-in-a-Haystack long-context retrieval
+python3 bench/run_quality_set.py              # 200-question quality suite
 ./bench/bench.sh                              # essay, tool-call, and 16K-TTFT smoke
 python3 bench/ndec.py                         # C1 net-decode delta probes
 python3 bench/scale.py --widths 4             # DFlash C4 scale probe
 python3 bench/scale.py                        # EAGLE C8/C16/C32 scale probe
 python3 bench/priority_ttft.py --streams 32   # saturated priority probe
-python3 bench/prefix_cache.py                 # cold vs reused long-prefix TTFT
 ```
-
-### Alternative Serving Profiles
-
-* **High-Concurrency Head (EAGLE 3/1/4)**: For C8–C32, run `./start-eagle.sh`. Captures CUDA graphs through C32.
-* **Native Upstream Head (DSpark)**: For an out-of-the-box profile on the unpatched base image, run `./start-dspark.sh`.
 
 ---
 
@@ -186,7 +171,6 @@ python3 bench/prefix_cache.py                 # cold vs reused long-prefix TTFT
 |---|---|---|
 | DFlash profile | draft `8`, window `2048`, four seats | Fast C1/C4 decode (~65 tok/s) |
 | EAGLE profile | `3/1/4`, 32 seats, continuous decode `1` | C8/C16/C32 throughput (~535 tok/s) |
-| DSpark profile | block `7`, four seats, native base image | Zero-overlay fallback |
 | Model revisions | Target `554ebba9…`, draft `50307d4…` | Reproducible weights |
 | Selector | SGLang [#35496](https://github.com/sgl-project/sglang/pull/35496) adaptation | Captures NVFP4 selector in CUDA graph |
 | Context | `262144` per request | Native context; YaRN off |
@@ -195,23 +179,6 @@ python3 bench/prefix_cache.py                 # cold vs reused long-prefix TTFT
 | CPU Pinning | `5-9,15-19` | Cortex-X5 core affinity |
 | Priority | default `0`, interactive `100` | Protects interactive decode latency |
 | Chat | thinking on, `qwen3_coder` tools | Reasoning and tool calling without restart |
-
----
-
-## Credits
-
-### Recipes and serving stacks
-- **[MiaAI-Lab](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark):** DFlash 2 image, net-decode clock and dual-head launcher patterns
-- **[r0b0tlab](https://github.com/r0b0tlab/qwen38-27b-nvfp4-sm121-sglang):** SM121 compatibility, pinned base image, quality & NIAH testing patterns
-- **[malaiwah](https://github.com/malaiwah/qwen38-27b-exl3):** EXL3 mixed-precision quantization research, KLD sensitivity mapping
-- **[Weschera](https://github.com/Weschera/Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark):** pinned DFlash 2 recipe, quality suite and speed/capacity profiles
-- **[0xBakeer](https://github.com/0xBakeer/Qwen3.8-27B-4-bit-on-a-single-DGX-Spark):** vLLM comparison on the same hardware
-
-### Engine, weights, model
-- **[SGLang](https://github.com/sgl-project/sglang):** serving engine, DFlash 2 [#35371](https://github.com/sgl-project/sglang/pull/35371) and selector capture [#35496](https://github.com/sgl-project/sglang/pull/35496)
-- **[z-lab / Inco](https://huggingface.co/z-lab/Qwen3.8-27B-DFlash2):** DFlash 2 draft model
-- **[RadixArk](https://huggingface.co/RadixArk/Qwen3.8-27B-NVFP4):** NVFP4 target checkpoint
-- **[Qwen](https://huggingface.co/Qwen/Qwen3.8-27B):** base model family
 
 ---
 
