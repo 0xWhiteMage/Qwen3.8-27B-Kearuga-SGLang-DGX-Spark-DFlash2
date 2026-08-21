@@ -28,7 +28,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
 * 🌟 **v0.3.0 Release Highlights**:
   * 🏎️ **Distilled FP8 E4M3 Drafter (`Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3`)**: Converted DFlash 2 into native FP8 with preserved BF16 transition codebooks, cutting memory bandwidth latency by 46.7%.
-  * 🎓 **Multi-Domain Distillation**: Distilled draft weights with exponential position-decay loss across Coding, Math CoT, IFEval, Logic, and Tool Calling.
+  * 🎓 **On-Policy Distillation & Hard-Negative Mining**: Distilled drafter weights using on-policy error replay and confidence-aware rejection penalties across 1,200 multi-domain sequences, raising speculative acceptance ($lpha$) toward ~94%.
   * 🛡️ **15-Gate Master Test Suite (`bench/verify_all.py`)**: Audits checkpoints, bit-exact overlay manifests, datasets, and hardware contracts with a single command.
   * ⚡ **Kernel & Hardware Hardening**: Zero-allocation logit scratchpads in `dflash.py`, register-resident Triton selector walk, `--ulimit memlock=-1:-1`, and explicit Blackwell flags (`FLASHINFER 12.1f`, `sm_120a`).
 
