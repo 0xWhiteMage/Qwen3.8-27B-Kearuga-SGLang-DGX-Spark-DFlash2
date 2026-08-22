@@ -2,7 +2,7 @@
 
 <p align="center">
   <img src="assets/header.png" alt="The White Mage — Qwen3.8-27B Kearuga on DGX Spark with SGLang, DFlash 2 and EAGLE" width="100%"><br><br>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v0.4.0-blue.svg?style=for-the-badge" alt="Version 0.4.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v0.4.1-blue.svg?style=for-the-badge" alt="Version 0.4.1"></a>
   <a href="#-benchmarks"><img src="https://img.shields.io/badge/C1_Net_Decode-65--82_tok%2Fs-success.svg?style=for-the-badge" alt="C1 Net Decode"></a>
   <a href="#-benchmarks"><img src="https://img.shields.io/badge/C32_Aggregate-535_tok%2Fs-purple.svg?style=for-the-badge" alt="C32 Aggregate"></a>
   <a href="#-runtime-envelope"><img src="https://img.shields.io/badge/KV_Pool-1%2C048%2C576_Tokens-orange.svg?style=for-the-badge" alt="KV Pool"></a>
@@ -11,14 +11,14 @@
   <a href="https://ko-fi.com/0xwhitemage" target="_blank"><img src="https://img.shields.io/badge/Kofi-Buy_me_a_coffee-1A9642?style=for-the-badge&logo=buymeacoffee&logoColor=white" alt="Ko-fi"></a>
 </p>
 
-Run **[Qwen3.8-27B-Kearuga-NVFP4](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4)** paired with the **[Kearuga DFlash 2 Drafter](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2)** on **[SGLang](https://docs.sglang.io)** on a single 128 GB NVIDIA DGX Spark (GB10). This repository provides production container builds, hardware launchers, kernel overlays, multi-domain distillation engines, and automated quality benchmarks.
+Run **[Qwen3.8-27B-Kearuga-NVFP4](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4)** paired with the **[Kearuga DFlash 2 Drafter](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2)** on **[SGLang](https://docs.sglang.io)** on a single 128 GB NVIDIA DGX Spark (GB10). This repository provides production container builds, hardware launchers, kernel overlays, on-target distillation tooling, and automated quality benchmarks.
 
 * ⚡ **DFlash 2 (Daily Driver)**: Ultra-responsive C1–C4 profile (~65–82 tok/s net C1, ~120–145 tok/s C4) with full reasoning & tool calling.
 * 🦅 **EAGLE 3/1/4 (Agent Swarms)**: 32-seat high-concurrency profile for agent pipelines (~535 tok/s at C32).
 * 📜 **1M-Token KV Pool**: Sustains **4 simultaneous native 262K contexts** in shared FP8 KV memory.
-* 🛡️ **Tiered Sensitivity Hierarchy**: EXL3-inspired mixed-precision NVFP4/FP8/BF16 preserving head fidelity and draft tap states.
+* 🛡️ **Tiered Sensitivity Hierarchy**: EXL3-inspired mixed-precision NVFP4/FP8/BF16 preserving head fidelity and draft tap states across all 2,194 tensors (including 27 vision blocks / 333 visual tensors).
 
-> 📖 **Deep Architectural Rationale**: Read **[Kearuga: Architecture Insights & Design Rationale](INSIGHTS.md)** to understand why tiered sensitivity quantization and multi-domain distillation outperform conventional approaches.
+> 📖 **Deep Architectural Rationale**: Read **[Kearuga: Architecture Insights & Design Rationale](INSIGHTS.md)** to understand why tiered sensitivity quantization and on-target distillation outperform conventional approaches.
 
 ---
 
@@ -26,12 +26,12 @@ Run **[Qwen3.8-27B-Kearuga-NVFP4](https://huggingface.co/0xWhiteMage/Qwen3.8-27B
 
 See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
-* 🌟 **v0.4.0 Release Highlights**:
-  * 🧠 **RLVR & GRPO 27B Reasoning Upgrade**: Post-trained across 1,500 verifiable problems in Math Olympiad, Python Algorithms, Logic, and Tool Calling, pushing **GSM8K to 96.9%** (+4.5%) and **HumanEval to 92.7%** (+6.5%).
-  * ⏱️ **Anti-Overthinking Soft Length Penalty**: Integrated length-penalized RLVR to eliminate runaway recursive loops, slashing mean thinking tokens by **81.6%** (~890 tokens).
-  * 🏎️ **Retrained DFlash 2 Drafter (`0bda4e3e...`)**: Aligned 5-layer sliding attention student on the new RLVR trajectories, boosting projected speculative acceptance rate ($\alpha$) to **~94.5%**.
-  * 🎛️ **Reasoning Effort Controls & Stochastic Calibration**: Standardized default `REASONING_EFFORT=medium`, `TEMPERATURE=0.6`, and `TOP_P=0.95` across launchers and benchmark suites.
-  * 🛡️ **Cross-Platform Manifest Hardening**: Enforced bit-exact Linux LF line endings via `.gitattributes` to guarantee 100% cross-platform parity.
+* 🌟 **v0.4.1 Release Highlights**:
+  * 🎯 **Frozen Target Model Specification (`8ea86bdc...`)**: Certified complete 2,194-tensor ModelOpt NVFP4 target checkpoint on [`0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4`](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4) with verified dual scale matrices (`weight_scale_2`, `input_scale`).
+  * 🔬 **On-Target DFlash 2 Distillation Protocol**: Established the on-target distillation architecture against live NVFP4 hidden states (`[5, 19, 33, 47, 61]`), bridging the distribution gap from generic BF16 checkpoints (~1% → **85–92%+** acceptance).
+  * ⚡ **Layer-Aware Fused KV Materialization**: Validated native BF16 attention projection preservation in DFlash 2, ensuring SGLang's `fused_kv_materialization` CUDA kernel is 100% active.
+  * 📚 **Deep 5,000-Sample Distillation Corpus**: Integrated multi-domain training suite across Olympiad Math, Python Algorithms, Formal Logic, Tool Calling, and IFEval in `artifacts/deep_distill_5000.jsonl`.
+  * 🚀 **SM121 Hardware Auto-Detection**: Fully removed legacy `sm_120a` flags to enable native JIT compilation on DGX Spark GB10.
 
 ---
 
@@ -44,7 +44,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
 | Solution / Repository | Speculative Method | Door-to-Door C1 (tok/s) | Net Decode C1 (tok/s) | Saturated C4 Aggregate (tok/s) |
 |---|---|---:|---:|---:|
-| 🧙‍♂️ **Kearuga Model Suite** | **DFlash 2 (Native BF16 (Fused KV Enabled))** | **46.0** | **65.0–82.0** | **120.0–145.0** |
+| 🧙‍♂️ **Kearuga Model Suite** | **DFlash 2 (Selective Hybrid BF16/FP8)** | **46.0** | **65.0–82.0** | **120.0–145.0** |
 | 🔹 [MiaAI-Lab](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark) | DFlash 2 (Base BF16) | — | 50.9 | 111.6 |
 | 🔹 [MiaAI-Lab](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark) | MTP (Self-Speculative) | ~26.0 | 33.0–35.0 | ~95.0 |
 | 🔹 [Weschera](https://github.com/Weschera/Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark) | DFlash 2 (NVFP4) | 34.0 | — | 64.0 |
@@ -84,11 +84,11 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 | Checkpoint Role | Baseline Unquantized (BF16) | Kearuga Optimized Checkpoint | Size Reduction | KL Divergence ($D_{\text{KL}}$) | Cosine Similarity |
 |---|---|---|---:|---:|---:|
 | **Target Model (27B)** | `Qwen/Qwen3.8-27B` (54.2 GiB) | **`Qwen3.8-27B-Kearuga-NVFP4` (31.37 GiB)** | **-42.1%** | **0.038** (Lossless) | **0.9919** |
-| **Draft Model (5-Layer)** | `z-lab/Qwen3.8-27B-DFlash2` (3.67 GiB) | **`Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3` (3.67 GiB)** | **-46.7%** | **0.012** (Lossless) | **1.0000** |
+| **Draft Model (5-Layer)** | `z-lab/Qwen3.8-27B-DFlash2` (3.67 GiB) | **`Qwen3.8-27B-Kearuga-DFlash2` (2.39 GiB)** | **-34.9%** | **0.012** (Lossless) | **0.9985** |
 
 ---
 
-## 🎛️ Runtime Envelope
+## 🎛️ Runtime Envelope & Memory Allocation
 
 > *"Four full native 262K contexts operating concurrently in a 1,048,576-token shared pool."*
 
@@ -98,109 +98,58 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 | 📜 **Shared Target KV Pool** | `1,048,576` tokens | Four simultaneous 262K requests without memory exhaustion |
 | 👥 **Admitted Concurrency** | `4` (DFlash) / `32` (EAGLE) | Governs maximum active parallel decode graphs |
 | 💾 **Target KV Allocation** | `32.0 GiB` | Allocated in FP8 KV (`fp8_e4m3`) |
-| 💾 **Draft KV Allocation** | `10.0 GiB` | 5.0 GiB K + 5.0 GiB V in dedicated draft buffers |
-| 📦 **Target Checkpoint** | **31.37 GiB** | `Qwen3.8-27B-Kearuga-NVFP4` (Hybrid NVFP4/FP8/BF16) |
-| 📦 **Draft Checkpoint** | **3.67 GiB** | `Qwen3.8-27B-Kearuga-DFlash2-FP8-E4M3` (Native BF16) |
-| 🧠 **DGX Spark Memory State** | ~`87 GiB` used / ~`34 GiB` free | Total unified system memory pool (128 GB) |
-| 📐 **DFlash Draft Window** | `2048` tokens | Native sliding-window draft attention span |
+| ⚡ **Target Weight Footprint** | `31.37 GiB` | ModelOpt NVFP4 (all 2,194 tensors, 3 shards) |
+| 🏎️ **Drafter Footprint** | `2.39 GiB` | Selective Hybrid FP8/BF16 (fused KV materialization active) |
+| 🛡️ **Total Serving VRAM** | **~67.0 GiB** | Fits with 61 GiB headroom on 128 GB Unified Memory |
 
 ---
 
-## 🚀 Quickstart & Deployment
+## 🚀 Quick Start Guide
 
-> *"Clone, configure, and launch on your DGX Spark in 3 simple commands."*
+### 1. Prerequisites
+* NVIDIA DGX Spark (GB10 / SM121, 128 GB Unified Memory)
+* Docker with NVIDIA Container Toolkit (`--gpus all`)
+* Linux kernel with unified memory support
 
-### 1. Clone & Configure
+### 2. Clone & Configure
 ```bash
-git clone https://github.com/0xWhiteMage/Qwen3.8-27B-Kearuga-SGLang-DGX-Spark-DFlash2.git
-cd Qwen3.8-27B-Kearuga-SGLang-DGX-Spark-DFlash2
+git clone https://github.com/0xWhiteMage/Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark.git
+cd Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark
 cp .env.sample .env
 ```
 
-### 2. Build & Launch Serving
-```bash
-# Build the DFlash 2 patched SGLang image
-bash patch/build-dflash2-image.sh
+### 3. Launch Serving Engines
 
-# Launch DFlash 2 daily driver profile
-./start-dflash2.sh
-
-# (Or launch EAGLE high-concurrency profile)
-# ./start-eagle.sh
-```
-
-> [!TIP]
-> **Local Path Support**: You can set `TARGET_MODEL` or `DFLASH_MODEL` in `.env` to an absolute host directory (e.g. `/workspace/models/...` or `/volume2/...`). The launcher automatically detects and bind-mounts the directory into Docker.
-
-### 3. Check Server Health
-```bash
-curl -s http://127.0.0.1:8888/v1/models
-curl -s http://127.0.0.1:8888/health
-```
-
-To stop the server cleanly: `./stop.sh` (or `./stop.sh --clean` to clear Triton caches).
+* **Daily Driver (DFlash 2 Interactive C1–C4)**:
+  ```bash
+  ./start-dflash2.sh
+  ```
+* **High-Concurrency Agent Swarms (EAGLE C8–C32)**:
+  ```bash
+  ./start-eagle.sh
+  ```
+* **Stop Server**:
+  ```bash
+  ./stop.sh
+  ```
 
 ---
 
-## 🧪 Benchmark & Validation Harnesses
+## 🧪 Verification & Benchmarking
 
-> *"Built-in test suites to verify semantic quality, long context, and latency on DGX Spark."*
-
+Run the complete 15-gate verification harness:
 ```bash
-# 1. Complete master integrity & checkpoint verification
 python3 bench/verify_all.py
+```
 
-# 2. 10-point deterministic correctness & canary test
+Run semantic canary and speculative decoding benchmarks:
+```bash
 python3 bench/semantic_gate.py
-
-# 3. 64K / 262K Needle-In-A-Haystack retrieval
-python3 bench/niah.py --context-size 65536
-
-# 4. 200-question multi-domain quality evaluation
-python3 bench/run_quality_set.py
-
-# 5. Full latency and throughput smoke tests
-./bench/bench.sh
 python3 bench/ndec.py
-python3 bench/scale.py --widths 4
+python3 bench/run_quality_set.py
 ```
 
 ---
 
-## ⚙️ Configuration Reference
-
-| Parameter | Recommended Value | Description |
-|---|---|---|
-| `TARGET_MODEL` | `0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4` | Full 2,194-tensor NVFP4 target model (or local host path) |
-| `DFLASH_MODEL` | `0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2` | Retrained RLVR-aligned FP8 draft model (or local path) |
-| `CONTEXT_LENGTH` | `262144` | Full native 262K context window |
-| `MAX_TOTAL_TOKENS` | `1048576` | Shared FP8 KV pool capacity |
-| `CPU_AFFINITY` | `5-9,15-19` | Cortex-X5 performance core pinning |
-| `PRIORITY_SCHEDULING` | `priority: 100` | Preempts queues for interactive requests |
-
----
-
-## 🤝 Acknowledgements & Community Credits
-
-> *"Kearuga builds directly upon breakthroughs pioneered by the open-source LLM, quantization, and speculative decoding communities."*
-
-We gratefully acknowledge the researchers, engineers, and creators whose open-source repositories and insights made this project possible:
-
-* 🔬 **[malaiwah/qwen38-27b-exl3](https://github.com/malaiwah/qwen38-27b-exl3)**: For the foundational EXL3 mixed-precision sensitivity research that inspired our Tiered Sensitivity Hierarchy.
-* 🚀 **[MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark)**: For pioneering SGLang DGX Spark deployment recipes and establishing early DFlash benchmarking.
-* 📦 **[Weschera/Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark](https://github.com/Weschera/Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark)**: For reproducible NVFP4 + DFlash 2 deployment patterns and capacity scaling probes.
-* ⚙️ **[r0b0tlab/qwen38-27b-nvfp4-sm121-sglang](https://github.com/r0b0tlab/qwen38-27b-nvfp4-sm121-sglang)**: For SM121 hardware image pinning, CPU core affinity contracts, and system stability flags.
-* 📊 **[0xBakeer/Qwen3.8-27B-4-bit-on-a-single-DGX-Spark](https://github.com/0xBakeer/Qwen3.8-27B-4-bit-on-a-single-DGX-Spark)**: For vLLM 4-bit memory allocation analysis and throughput benchmarks.
-* 🧩 **[dfischermittwald/Qwen3.8-27B-NVFP4-DFlash2](https://huggingface.co/dfischermittwald/Qwen3.8-27B-NVFP4-DFlash2)**: For demonstrating NVFP4 target model calibration for DFlash 2 pairing.
-* 🧪 **[alphakek/Qwen3.8-27B-heretic-ara-DFlash2](https://huggingface.co/alphakek/Qwen3.8-27B-heretic-ara-DFlash2)** & **[magiccodingman/Qwen3.8-27B-heretic-ara-DFlash2-fp8](https://huggingface.co/magiccodingman/Qwen3.8-27B-heretic-ara-DFlash2-fp8)**: For demonstrating domain-aligned DFlash 2 distillation on specialized fine-tunes.
-* 🗜️ **[lued/Qwen3.8-27B-INT8-W8A16-DFlash2](https://huggingface.co/lued/Qwen3.8-27B-INT8-W8A16-DFlash2)** & **[syvai/Qwen3.8-27B-DFlash2-W4A16](https://huggingface.co/syvai/Qwen3.8-27B-DFlash2-W4A16)**: For exploring quantized drafter boundaries (W8A16 and W4A16).
-* ⚡ **[z-lab/dflash](https://github.com/z-lab/dflash)**: For inventing the revolutionary block-diffusion speculative decoding architecture.
-* 🎯 **[RadixArk/Qwen3.8-27B-NVFP4](https://huggingface.co/RadixArk/Qwen3.8-27B-NVFP4)**: For the calibrated base NVFP4 target weights.
-* 🌐 **[SGLang Project](https://github.com/sgl-project/sglang)**: For the high-throughput inference engine, radix attention, and speculative decoding framework.
-* 🌟 **[huggingface/open-r1](https://github.com/huggingface/open-r1)** & **[hkust-nlp/simpleRL-reason](https://github.com/hkust-nlp/simpleRL-reason)**: For open-source GRPO/RLVR post-training recipes and verifiable reward methods.
-
----
-
-## 📄 License
-
-MIT License for this model distribution and repository. Base model weights, container images, and upstream components adhere to their respective original licenses.
+## 📄 License & Citations
+Distributed under the Apache 2.0 License. See [LICENSE](LICENSE) for details.
