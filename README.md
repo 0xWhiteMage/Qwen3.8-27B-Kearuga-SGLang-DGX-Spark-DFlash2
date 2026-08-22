@@ -3,17 +3,17 @@
 <p align="center">
   <img src="assets/header.png" alt="The White Mage — Qwen3.8-27B Kearuga on DGX Spark with SGLang, DFlash 2 and EAGLE" width="100%"><br><br>
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v0.4.1-blue.svg?style=for-the-badge" alt="Version 0.4.1"></a>
-  <a href="#-benchmarks"><img src="https://img.shields.io/badge/C1_Net_Decode-65--82_tok%2Fs-success.svg?style=for-the-badge" alt="C1 Net Decode"></a>
+  <a href="#-benchmarks"><img src="https://img.shields.io/badge/C1_Net_Decode-~65_tok%2Fs-success.svg?style=for-the-badge" alt="C1 Net Decode"></a>
   <a href="#-benchmarks"><img src="https://img.shields.io/badge/C32_Aggregate-535_tok%2Fs-purple.svg?style=for-the-badge" alt="C32 Aggregate"></a>
   <a href="#-runtime-envelope"><img src="https://img.shields.io/badge/KV_Pool-1%2C048%2C576_Tokens-orange.svg?style=for-the-badge" alt="KV Pool"></a>
-  <a href="#-saturated-responsiveness--priority-scheduling"><img src="https://img.shields.io/badge/Priority_TTFT-2.63s-red.svg?style=for-the-badge" alt="Priority TTFT"></a><br><br>
+  <a href="#-saturated-responsiveness--priority-scheduling"><img src="https://img.shields.io/badge/Priority_TTFT-~2.6s-red.svg?style=for-the-badge" alt="Priority TTFT"></a><br><br>
   <a href="https://x.com/0xWhiteMage" target="_blank"><img src="https://img.shields.io/badge/Follow_on_X-@0xWhiteMage-000000?style=for-the-badge&logo=x&logoColor=white" alt="Follow on X"></a> ·
   <a href="https://ko-fi.com/0xwhitemage" target="_blank"><img src="https://img.shields.io/badge/Kofi-Buy_me_a_coffee-1A9642?style=for-the-badge&logo=buymeacoffee&logoColor=white" alt="Ko-fi"></a>
 </p>
 
 Run **[Qwen3.8-27B-Kearuga-NVFP4](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4)** paired with the **[Kearuga DFlash 2 Drafter](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-DFlash2)** on **[SGLang](https://docs.sglang.io)** on a single 128 GB NVIDIA DGX Spark (GB10). This repository provides production container builds, hardware launchers, kernel overlays, on-target distillation tooling, and automated quality benchmarks.
 
-* ⚡ **DFlash 2 (Daily Driver)**: Ultra-responsive C1–C4 profile (~65–82 tok/s net C1, ~120–145 tok/s C4) with full reasoning & tool calling.
+* ⚡ **DFlash 2 (Daily Driver)**: Ultra-responsive C1–C4 profile (~65 tok/s net C1, ~121 tok/s C4) with full reasoning & tool calling.
 * 🦅 **EAGLE 3/1/4 (Agent Swarms)**: 32-seat high-concurrency profile for agent pipelines (~535 tok/s at C32).
 * 📜 **1M-Token KV Pool**: Sustains **4 simultaneous native 262K contexts** in shared FP8 KV memory.
 * 🛡️ **Tiered Sensitivity Hierarchy**: EXL3-inspired mixed-precision NVFP4/FP8/BF16 preserving head fidelity and draft tap states across all 2,194 tensors (including 27 vision blocks / 333 visual tensors).
@@ -28,7 +28,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
 * 🌟 **v0.4.1 Release Highlights**:
   * 🎯 **Certified Target Model Specification (`8ea86bdc...`)**: Certified complete 2,194-tensor ModelOpt NVFP4 target checkpoint on [`0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4`](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4) with verified dual scale matrices (`weight_scale_2`, `input_scale`).
-  * 🔬 **On-Target DFlash 2 Distillation Protocol**: Established the on-target distillation architecture against live NVFP4 hidden states (`[5, 19, 33, 47, 61]`), optimizing student cross-attention for sustained **85–92%+** speculative acceptance.
+  * 🔬 **On-Target DFlash 2 Distillation Protocol** *(planned — not yet trained)*: Established the on-target distillation architecture against live NVFP4 hidden states (`[5, 19, 33, 47, 61]`), optimizing student cross-attention for sustained high speculative acceptance (~2.8 accepted tokens per step).
   * ⚡ **Layer-Aware Fused KV Materialization**: Validated native BF16 attention projection preservation in DFlash 2, ensuring SGLang's `fused_kv_materialization` CUDA kernel is 100% active.
   * 📚 **Deep 5,000-Sample Distillation Corpus**: Integrated multi-domain training suite across Olympiad Math, Python Algorithms, Formal Logic, Tool Calling, and IFEval in `artifacts/deep_distill_5000.jsonl`.
   * 🚀 **SM121 Hardware Auto-Detection**: Fully removed legacy `sm_120a` flags to enable native JIT compilation on DGX Spark GB10.
@@ -44,7 +44,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
 | Solution / Repository | Speculative Method | Door-to-Door C1 (tok/s) | Net Decode C1 (tok/s) | Saturated C4 Aggregate (tok/s) |
 |---|---|---:|---:|---:|
-| 🧙‍♂️ **Kearuga Model Suite** | **DFlash 2 (Selective Hybrid BF16/FP8)** | **46.0** | **65.0–82.0** | **120.0–145.0** |
+| 🧙‍♂️ **Kearuga Model Suite** | **DFlash 2 (BF16)** | **41.7** | **~65** | **~121** |
 | 🔹 [MiaAI-Lab](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark) | DFlash 2 (Base BF16) | — | 50.9 | 111.6 |
 | 🔹 [MiaAI-Lab](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark) | MTP (Self-Speculative) | ~26.0 | 33.0–35.0 | ~95.0 |
 | 🔹 [Weschera](https://github.com/Weschera/Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark) | DFlash 2 (NVFP4) | 34.0 | — | 64.0 |
@@ -66,7 +66,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
 | Server Load State | Default Priority TTFT | Interactive Priority (`priority: 100`) | Latency Reduction |
 |---|---:|---:|---:|
-| **DFlash 2 (All 4 Seats Busy)** | 43.15 s | **2.63 s** | **~94% Faster** |
+| **DFlash 2 (All 4 Seats Busy)** | ~43 s | **~2.6 s** | **~94% Faster** |
 | **EAGLE (All 32 Seats Busy)** | 73.30 s | **2.76 s** | **96.2% Faster** |
 
 ```json
@@ -84,7 +84,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 | Checkpoint Role | Baseline Unquantized (BF16) | Kearuga Optimized Checkpoint | Size Reduction | KL Divergence ($D_{\text{KL}}$) | Cosine Similarity |
 |---|---|---|---:|---:|---:|
 | **Target Model (27B)** | `Qwen/Qwen3.8-27B` (54.2 GiB) | **`Qwen3.8-27B-Kearuga-NVFP4` (31.37 GiB)** | **-42.1%** | **0.038** (Lossless) | **0.9919** |
-| **Draft Model (5-Layer)** | `z-lab/Qwen3.8-27B-DFlash2` (3.67 GiB) | **`Qwen3.8-27B-Kearuga-DFlash2` (2.39 GiB)** | **-34.9%** | **0.012** (Lossless) | **0.9985** |
+| **Draft Model (5-Layer)** | `z-lab/Qwen3.8-27B-DFlash2` (3.67 GiB, BF16) | *(custom drafter — planned)* | — | — | — |
 
 ---
 
@@ -99,7 +99,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 | 👥 **Admitted Concurrency** | `4` (DFlash) / `32` (EAGLE) | Governs maximum active parallel decode graphs |
 | 💾 **Target KV Allocation** | `32.0 GiB` | Allocated in FP8 KV (`fp8_e4m3`) |
 | ⚡ **Target Weight Footprint** | `31.37 GiB` | ModelOpt NVFP4 (all 2,194 tensors, 3 shards) |
-| 🏎️ **Drafter Footprint** | `2.39 GiB` | Selective Hybrid FP8/BF16 (fused KV materialization active) |
+| 🏎️ **Drafter Footprint** | `3.67 GiB` | BF16 (fused KV materialization active) |
 | 🛡️ **Total Serving VRAM** | **~67.0 GiB** | Fits with 61 GiB headroom on 128 GB Unified Memory |
 
 ---
