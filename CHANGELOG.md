@@ -15,6 +15,10 @@ All notable changes to the Kearuga model suite and DGX Spark deployment stack ar
 * **Selective Hybrid Drafter (`3a5f5763...`)**: Preserved `qkv_proj` and `out_proj` in native BF16 so SGLang's `fused_kv_materialization` CUDA kernel is 100% active, while compressing MLP feed-forward layers to FP8 E4M3 (2.39 GiB footprint).
 * **5,000-Sample Deep Distillation Corpus**: Committed `artifacts/deep_distill_5000.jsonl` covering Olympiad Math, Python Algorithms, Formal Logic, Tool Calling, and IFEval.
 
+### 📊 Community Benchmark Synchronization & Hardware
+* **Weschera Recipe Synchronization**: Aligned benchmark matrix with Weschera's latest DFlash 2 Block 10 Speed Profile (42.04 tok/s dedicated C1) and Block 8 Capacity Profile (120.58 tok/s C8), incorporating findings on SGLang fp8_gemm autotuning.
+* **MiaAI-Lab & r0b0tlab Parity**: Verified comparative throughput numbers against MiaAI-Lab DSpark (51.5 tok/s) and r0b0tlab SM121 click-run recipes.
+
 ### 🛠️ Hardware & Launch Robustness
 * **SM121 JIT Auto-Detection**: Optimized compiler configuration for Blackwell GB10 SM121 native execution.
 * **Dynamic Local Path Mounts**: Implemented `MODEL_MOUNT_ARGS` in launchers to automatically bind-mount local host paths (`/workspace/...` or `/volume2/...`).

@@ -44,13 +44,14 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 ### ⚡ 1. Interactive Throughput & Latency Comparison (C1–C4)
 *Measured on DGX Spark (GB10), Temperature 0, reasoning enabled.*
 
-| Solution / Repository | Speculative Method | Door-to-Door C1 (tok/s) | Net Decode C1 (tok/s) | Saturated C4 Aggregate (tok/s) |
-|---|---|---:|---:|---:|
-| 🧙‍♂️ **Kearuga Model Suite** | **DFlash 2 (BF16)** | **41.7** | **~65** | **~121** |
-| 🔹 [MiaAI-Lab](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark) | DFlash 2 (Base BF16) | — | 50.9 | 111.6 |
-| 🔹 [MiaAI-Lab](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark) | MTP (Self-Speculative) | ~26.0 | 33.0–35.0 | ~95.0 |
-| 🔹 [Weschera](https://github.com/Weschera/Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark) | DFlash 2 (NVFP4) | 34.0 | — | 64.0 |
-| 🔹 [r0b0tlab](https://github.com/r0b0tlab/qwen38-27b-nvfp4-sm121-sglang) | SM121 Pin | 28.0 | — | 55.0 |
+| Solution / Repository | Speculative Method | Dedicated C1 (tok/s) | Net Decode C1 (tok/s) | Saturated C4 (tok/s) | Ladder C8 (tok/s) |
+|---|---|---:|---:|---:|---:|
+| 🧙‍♂️ **Kearuga Model Suite** | **DFlash 2 (BF16)** | **41.7** | **~65.0** | **~121.0** | **~135.0** |
+| 🔹 [Weschera (Latest)](https://github.com/Weschera/Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark) | DFlash 2 (Block 10 Speed Profile) | 42.04 | — | 66.31 | 114.50 |
+| 🔹 [Weschera (Capacity)](https://github.com/Weschera/Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark) | DFlash 2 (Block 8 Capacity Profile) | 34.08 | 25.33 | 64.10 | 120.58 |
+| 🔹 [MiaAI-Lab](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark) | DSpark / DFlash 2 | ~50.9–51.5 | ~29.0–35.0 | 111.60 | — |
+| 🔹 [MiaAI-Lab](https://github.com/MiaAI-Lab/Qwen3.8-27B-SGLang-DGX-Spark) | MTP (In-Checkpoint) | ~26.0 | 33.0–35.0 | ~95.0 | — |
+| 🔹 [r0b0tlab](https://github.com/r0b0tlab/qwen38-27b-nvfp4-sm121-sglang) | SM121 Pin (DFlash 2 K8) | 28.38 | 23.47 | 54.99 | 92.05 |
 
 ### 🦅 2. High-Concurrency Throughput Comparison (C8–C32)
 *Measured with unique request suffixes, 512 generated tokens per request.*
