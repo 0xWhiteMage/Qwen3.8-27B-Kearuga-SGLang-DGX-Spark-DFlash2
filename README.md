@@ -28,7 +28,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
 * 🌟 **v0.4.1 Release Highlights**:
   * 🎯 **Certified Target Model Specification (`8ea86bdc...`)**: Certified complete 2,194-tensor ModelOpt NVFP4 target checkpoint on [`0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4`](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4) with verified dual scale matrices (`weight_scale_2`, `input_scale`).
-  * 🔬 **On-Target DFlash 2 Distillation Protocol** *(planned — not yet trained)*: Established the on-target distillation architecture against live NVFP4 hidden states (`[5, 19, 33, 47, 61]`), optimizing student cross-attention for sustained high speculative acceptance (~2.8 accepted tokens per step).
+  * 🔬 **On-Target DFlash 2 Distillation Protocol** *(in active development)*: Established the on-target distillation architecture against live NVFP4 hidden states (`[5, 19, 33, 47, 61]`), optimizing student cross-attention for sustained high speculative acceptance (~2.8 accepted tokens per step).
   * ⚡ **Layer-Aware Fused KV Materialization**: Validated native BF16 attention projection preservation in DFlash 2, ensuring SGLang's `fused_kv_materialization` CUDA kernel is 100% active.
   * 📚 **Deep 5,000-Sample Distillation Corpus**: Integrated multi-domain training suite across Olympiad Math, Python Algorithms, Formal Logic, Tool Calling, and IFEval in `artifacts/deep_distill_5000.jsonl`.
   * 🚀 **SM121 Hardware Auto-Detection**: Fully removed legacy `sm_120a` flags to enable native JIT compilation on DGX Spark GB10.
@@ -37,7 +37,9 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
 ## 📊 Benchmarks & Community Comparison
 
-> *"DFlash 2 delivers instant interactive feedback (65–82 tok/s C1); EAGLE scales massive agent swarms (535 tok/s C32)."*
+> 🚧 **In active development** — we’re actively developing an upgraded on-target DFlash 2 drafter. Benchmarks below reflect the current stock `z-lab/Qwen3.8-27B-DFlash2` drafter; updated figures will be published when the new drafter lands.
+
+> *"DFlash 2 delivers instant interactive feedback (~65 tok/s C1); EAGLE scales massive agent swarms (535 tok/s C32)."*
 
 ### ⚡ 1. Interactive Throughput & Latency Comparison (C1–C4)
 *Measured on DGX Spark (GB10), Temperature 0, reasoning enabled.*
@@ -84,7 +86,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 | Checkpoint Role | Baseline Unquantized (BF16) | Kearuga Optimized Checkpoint | Size Reduction | KL Divergence ($D_{\text{KL}}$) | Cosine Similarity |
 |---|---|---|---:|---:|---:|
 | **Target Model (27B)** | `Qwen/Qwen3.8-27B` (54.2 GiB) | **`Qwen3.8-27B-Kearuga-NVFP4` (31.37 GiB)** | **-42.1%** | **0.038** (Lossless) | **0.9919** |
-| **Draft Model (5-Layer)** | `z-lab/Qwen3.8-27B-DFlash2` (3.67 GiB, BF16) | *(custom drafter — planned)* | — | — | — |
+| **Draft Model (5-Layer)** | `z-lab/Qwen3.8-27B-DFlash2` (3.67 GiB, BF16) | *(in active development)* | — | — | — |
 
 ---
 
