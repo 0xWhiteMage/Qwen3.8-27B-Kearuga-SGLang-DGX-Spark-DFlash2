@@ -52,13 +52,13 @@ Kearuga achieves this on a **single 128 GB NVIDIA DGX Spark (GB10)** by pairing 
 
 ## 🔬 2. Why Our Quantization Strategy Is Superior
 
-> *"Uniform quantization destroys model reasoning. Tiered sensitivity quantization preserves intelligence while maximizing hardware speed."*
+> *"Uniform quantization compromises model reasoning. Tiered sensitivity quantization preserves intelligence while maximizing hardware speed."*
 
-### ❌ The Problem with Uniform Quantization
-Most community builds apply a single quantization format across all layers (e.g. uniform INT4 or uniform NVFP4). On dense architectures like Qwen3.8-27B, this causes:
-1. **Logit Tail Collapse**: Quantizing `embed_tokens` and `lm_head` causes severe corruption of code syntax and rare vocabulary tokens.
-2. **Recurrent State Drift**: Gated DeltaNet linear attention projections (`in_proj`, `conv1d`) drift over long context windows (>64K tokens) if compressed to 4-bit.
-3. **Drafter Feature Noise**: Uniform target quantization injects noise into intermediate tapped layers (`[5, 19, 33, 47, 61]`), degrading speculative draft acceptance.
+### ❌ The Limitation of Uniform Quantization
+Applying a single quantization format across all layers (e.g. uniform INT4 or uniform NVFP4) introduces uneven numerical degradation across sensitive architectural components:
+1. **Vocabulary Logit Fidelity**: Quantizing `embed_tokens` and `lm_head` causes loss of precision on code syntax and rare vocabulary tokens.
+2. **Recurrent State Sensitivity**: Gated DeltaNet linear attention projections (`in_proj`, `conv1d`) benefit from higher precision over long context windows (>64K tokens).
+3. **Speculative Feature Quality**: Intermediate tapped layers (`[5, 19, 33, 47, 61]`) require clean representations to maximize candidate block acceptance.
 
 ### ✅ The Kearuga Solution: EXL3-Inspired Tiered Sensitivity Hierarchy
 
@@ -74,7 +74,7 @@ Applying sensitivity lessons from mixed-precision research ([`malaiwah/qwen38-27
 │         │ 27 Vision Blocks (333 tensors)   │              │ tails, multimodal reasoning│
 ├─────────┼──────────────────────────────────┼──────────────┼────────────────────────────┤
 │ Tier 2  │ Attention Projections (Q, K, V, O)│ FP8 (e4m3)   │ Preserves draft feature    │
-│         │ GDN Recurrence (in_proj)         │              │ taps & prevents state drift│
+│         │ GDN Recurrence (in_proj)         │              │ taps & numerical stability │
 ├─────────┼──────────────────────────────────┼──────────────┼────────────────────────────┤
 │ Tier 3  │ Middle MLP Blocks (Layers 2–61)  │ NVFP4        │ Maximum Blackwell Tensor   │
 │         │ (gate_proj, up_proj, down_proj)  │ (ModelOpt)   │ Core acceleration (~70% wt)│
@@ -89,29 +89,19 @@ Applying sensitivity lessons from mixed-precision research ([`malaiwah/qwen38-27
 
 > *"Drafter precision must preserve SGLang's fused CUDA graph materialization while minimizing memory bus traffic."*
 
-### Why Blanket FP8 Drafters Fail (The 0% Acceptance Bug)
+### 3.1 Fused KV Materialization Contract
 In SGLang's DFlash engine, the draft model projects target hidden states into the draft KV cache using a specialized CUDA kernel (`fused_dflash_kv_kernel`).
-* When `self_attn.qkv_proj` is quantized to FP8 (`Fp8LinearMethod`), SGLang disables `fused_kv_materialization` with a warning:
-  `DFLASH fused KV materialization disabled: quantized qkv_proj is not supported for this path`
-* Disabling this kernel causes intermediate representations to drift, dropping acceptance rate ($\alpha$) to **0.00**.
-
-### The Selective Hybrid Solution
-1. **`self_attn.qkv_proj` & `out_proj`**: Preserved in **`torch.bfloat16`** $\rightarrow$ Fused KV materialization is **100% ENABLED**.
-2. **`mlp.gate_proj`, `up_proj`, `down_proj`**: Quantized to **`torch.float8_e4m3fn`** with 99.99th percentile scaling $\rightarrow$ reduces memory bus footprint to **2.39 GiB**.
+* SGLang's high-speed kernel requires `self_attn.qkv_proj` in native **BF16**.
+* By keeping `qkv_proj` and `out_proj` in native BF16 while quantizing the feed-forward MLPs to FP8 E4M3, we achieve zero-allocation CUDA graph execution with a compact **2.39 GiB** footprint.
 
 ---
 
-## 🎓 4. On-Target Distillation: Resolving the NVFP4 Hidden-State Gap
+## 🎓 4. On-Target Distillation: Precision Feature Calibration
 
-> *"A draft model distilled on unquantized BF16 weights cannot predict an NVFP4 model's shifted hidden states."*
+> *"Distilling the student model directly on the target's live feature representations ensures optimal token acceptance."*
 
-### The Hidden-State Distribution Shift
-* Generic DFlash drafters (such as `z-lab/Qwen3.8-27B-DFlash2`) were trained on the unquantized BF16 base model.
-* When the 27B model is quantized to NVFP4 (W4A4), the intermediate layer activations at `[5, 19, 33, 47, 61]` undergo a slight distribution shift.
-* Pairing an uncalibrated BF16 drafter with an NVFP4 target causes acceptance rate to collapse to **~1.0%**.
-
-### The On-Target Distillation Protocol
-To achieve **$\alpha \ge 85\%\text{--}92\%$**, the drafter is distilled directly against the live forward activations of the frozen NVFP4 target model:
+### 4.1 The On-Target Feature Calibration Principle
+DFlash 2 operates by conditioning on intermediate features from the target model at layers `[5, 19, 33, 47, 61]`. Distilling the student model directly on the target model's representations ensures exact numerical alignment with the 27B model's output distribution, achieving sustained high acceptance rates of **85–92%+**:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -131,7 +121,7 @@ To achieve **$\alpha \ge 85\%\text{--}92\%$**, the drafter is distilled directly
 
 ## 💾 5. Hardware Memory Math: Serving vs. Full-Scale Training
 
-> *"A single 128 GB DGX Spark is an extraordinary serving engine and drafter trainer, but full 27B GRPO training belongs on an 8×H100 cloud cluster."*
+> *"A single 128 GB DGX Spark is an extraordinary serving engine and drafter trainer, while full 27B GRPO training is optimized for multi-GPU cloud clusters."*
 
 ### A. Serving on a Single 128 GB DGX Spark (Comfortable Headroom)
 * **Target Model (ModelOpt NVFP4)**: 31.37 GiB

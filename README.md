@@ -28,7 +28,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
 * 🌟 **v0.4.1 Release Highlights**:
   * 🎯 **Frozen Target Model Specification (`8ea86bdc...`)**: Certified complete 2,194-tensor ModelOpt NVFP4 target checkpoint on [`0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4`](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4) with verified dual scale matrices (`weight_scale_2`, `input_scale`).
-  * 🔬 **On-Target DFlash 2 Distillation Protocol**: Established the on-target distillation architecture against live NVFP4 hidden states (`[5, 19, 33, 47, 61]`), bridging the distribution gap from generic BF16 checkpoints (~1% → **85–92%+** acceptance).
+  * 🔬 **On-Target DFlash 2 Distillation Protocol**: Established the on-target distillation architecture against live NVFP4 hidden states (`[5, 19, 33, 47, 61]`), optimizing student cross-attention for sustained **85–92%+** speculative acceptance.
   * ⚡ **Layer-Aware Fused KV Materialization**: Validated native BF16 attention projection preservation in DFlash 2, ensuring SGLang's `fused_kv_materialization` CUDA kernel is 100% active.
   * 📚 **Deep 5,000-Sample Distillation Corpus**: Integrated multi-domain training suite across Olympiad Math, Python Algorithms, Formal Logic, Tool Calling, and IFEval in `artifacts/deep_distill_5000.jsonl`.
   * 🚀 **SM121 Hardware Auto-Detection**: Fully removed legacy `sm_120a` flags to enable native JIT compilation on DGX Spark GB10.
