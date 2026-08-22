@@ -85,7 +85,7 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
 | Checkpoint Role | Baseline Unquantized (BF16) | Kearuga Optimized Checkpoint | Size Reduction | KL Divergence ($D_{\text{KL}}$) | Cosine Similarity |
 |---|---|---|---:|---:|---:|
-| **Target Model (27B)** | `Qwen/Qwen3.8-27B` (51.8 GiB) | **`Qwen3.8-27B-Kearuga-NVFP4` (20.4 GiB)** | **-60.5%** | **0.038** (Lossless) | **0.9919** |
+| **Target Model (27B)** | `Qwen/Qwen3.8-27B` (51.8 GiB) | **`Qwen3.8-27B-Kearuga-NVFP4` (20.4 GiB)** | **-60.5%** | — | — |
 | **Draft Model (5-Layer)** | `z-lab/Qwen3.8-27B-DFlash2` (3.58 GiB, BF16) | *(in active development)* | — | — | — |
 
 ---
