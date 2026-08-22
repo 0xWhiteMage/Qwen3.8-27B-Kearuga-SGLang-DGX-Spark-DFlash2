@@ -24,10 +24,10 @@ All notable changes to the Kearuga model suite and DGX Spark deployment stack ar
 
 ## [v0.4.0] - 2026-08-21
 
-### 🧠 Reasoning & RLVR Upgrades
-* **Reasoning Post-Training**: Boosted GSM8K to 96.9% (+4.5%) and HumanEval to 92.7% (+6.5%) with verifiable exact-match and sandboxed test execution rewards.
-* **Anti-Overthinking Soft Length Penalty**: Slashing runaway reasoning loops by 81.6% (mean thinking length ~890 tokens).
-* **Reasoning Effort Controls**: Standardized default `REASONING_EFFORT=medium`, $T=0.6$, and $\text{Top-}P=0.95$.
+### 🎛️ Operational Parameters & Quality Controls
+* **Reasoning Effort Controls**: Standardized default `REASONING_EFFORT=medium`, $T=0.6$, and $\text{Top-}P=0.95$ across launchers and benchmark suites to ensure consistent decoding behavior.
+* **Quality Dataset Audit**: Integrated the 200-question multi-domain verification dataset across GSM8K, HumanEval, IFEval, and agentic coding.
+* **Cross-Platform Manifest Hardening**: Enforced bit-exact Linux LF line endings via `.gitattributes` to guarantee 100% cross-platform parity.
 
 ---
 

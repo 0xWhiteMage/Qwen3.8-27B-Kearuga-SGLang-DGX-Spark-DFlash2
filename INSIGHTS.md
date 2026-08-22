@@ -1,6 +1,6 @@
 # 🧙‍♂️ Kearuga: Architecture Insights & Design Rationale
 
-> A deep dive into the engineering choices, quantization hierarchy, and speculative distillation techniques powering Qwen3.8-27B on the NVIDIA DGX Spark.
+> A deep dive into the engineering choices, quantization hierarchy, and speculative inference techniques powering Qwen3.8-27B on the NVIDIA DGX Spark.
 
 ---
 
@@ -119,23 +119,16 @@ DFlash 2 operates by conditioning on intermediate features from the target model
 
 ---
 
-## 💾 5. Hardware Memory Math: Serving vs. Full-Scale Training
+## 💾 5. Hardware Memory Math: Serving Envelope
 
-> *"A single 128 GB DGX Spark is an extraordinary serving engine and drafter trainer, while full 27B GRPO training is optimized for multi-GPU cloud clusters."*
+> *"A single 128 GB DGX Spark serves the 27-billion parameter dense model with abundant headroom."*
 
-### A. Serving on a Single 128 GB DGX Spark (Comfortable Headroom)
+### Serving on a Single 128 GB DGX Spark (Comfortable Headroom)
 * **Target Model (ModelOpt NVFP4)**: 31.37 GiB
 * **DFlash 2 Drafter (Selective Hybrid)**: 2.39 GiB
 * **1M-Token FP8 KV Cache Pool**: 32.00 GiB
-* **SGLang & PyTorch Overhead**: ~4.00 GiB
+* **SGLang & PyTorch Runtime Overhead**: ~4.00 GiB
 * **Total Serving Footprint**: **~69.76 GiB (fits easily within 128 GB Unified Memory with >58 GiB headroom)**.
-
-### B. Full 27B Parameter GRPO Training (Requires Cloud GPU Cluster)
-* **BF16 Model Parameters (27B)**: $27\text{B} \times 2\text{ B} = 54\text{ GiB}$
-* **AdamW Optimizer States (fp32 $m + v$)**: $27\text{B} \times 8\text{ B} = 216\text{ GiB}$
-* **Gradients ($fp32 / bf16$)**: $27\text{B} \times 2\text{--}4\text{ B} = 54\text{--}108\text{ GiB}$
-* **Reference Model + 4× Group Rollouts + KV Buffers**: $>60\text{ GiB}$
-* **Total Memory Required**: **~384–438 GiB (Requires an 8×H100 640 GB cluster)**.
 
 ---
 
@@ -163,4 +156,3 @@ We gratefully acknowledge the researchers, engineers, and creators whose open-so
 * 📊 **[0xBakeer/Qwen3.8-27B-4-bit-on-a-single-DGX-Spark](https://github.com/0xBakeer/Qwen3.8-27B-4-bit-on-a-single-DGX-Spark)**: For vLLM 4-bit memory allocation analysis and throughput benchmarks.
 * ⚡ **[z-lab/dflash](https://github.com/z-lab/dflash)**: For inventing the revolutionary block-diffusion speculative decoding architecture.
 * 🌐 **[SGLang Project](https://github.com/sgl-project/sglang)**: For the high-throughput inference engine, radix attention, and speculative decoding framework.
-* 🌟 **[huggingface/open-r1](https://github.com/huggingface/open-r1)** & **[hkust-nlp/simpleRL-reason](https://github.com/hkust-nlp/simpleRL-reason)**: For open-source GRPO/RLVR post-training recipes and verifiable reward methods.

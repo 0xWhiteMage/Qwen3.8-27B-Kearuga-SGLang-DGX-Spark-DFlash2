@@ -18,7 +18,7 @@ Run **[Qwen3.8-27B-Kearuga-NVFP4](https://huggingface.co/0xWhiteMage/Qwen3.8-27B
 * 📜 **1M-Token KV Pool**: Sustains **4 simultaneous native 262K contexts** in shared FP8 KV memory.
 * 🛡️ **Tiered Sensitivity Hierarchy**: EXL3-inspired mixed-precision NVFP4/FP8/BF16 preserving head fidelity and draft tap states across all 2,194 tensors (including 27 vision blocks / 333 visual tensors).
 
-> 📖 **Deep Architectural Rationale**: Read **[Kearuga: Architecture Insights & Design Rationale](INSIGHTS.md)** to understand why tiered sensitivity quantization and on-target distillation outperform conventional approaches.
+> 📖 **Deep Architectural Rationale**: Read **[Kearuga: Architecture Insights & Design Rationale](INSIGHTS.md)** to understand why tiered sensitivity quantization and dual-engine speculative inference outperform conventional approaches.
 
 ---
 
@@ -27,7 +27,7 @@ Run **[Qwen3.8-27B-Kearuga-NVFP4](https://huggingface.co/0xWhiteMage/Qwen3.8-27B
 See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
 * 🌟 **v0.4.1 Release Highlights**:
-  * 🎯 **Frozen Target Model Specification (`8ea86bdc...`)**: Certified complete 2,194-tensor ModelOpt NVFP4 target checkpoint on [`0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4`](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4) with verified dual scale matrices (`weight_scale_2`, `input_scale`).
+  * 🎯 **Certified Target Model Specification (`8ea86bdc...`)**: Certified complete 2,194-tensor ModelOpt NVFP4 target checkpoint on [`0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4`](https://huggingface.co/0xWhiteMage/Qwen3.8-27B-Kearuga-NVFP4) with verified dual scale matrices (`weight_scale_2`, `input_scale`).
   * 🔬 **On-Target DFlash 2 Distillation Protocol**: Established the on-target distillation architecture against live NVFP4 hidden states (`[5, 19, 33, 47, 61]`), optimizing student cross-attention for sustained **85–92%+** speculative acceptance.
   * ⚡ **Layer-Aware Fused KV Materialization**: Validated native BF16 attention projection preservation in DFlash 2, ensuring SGLang's `fused_kv_materialization` CUDA kernel is 100% active.
   * 📚 **Deep 5,000-Sample Distillation Corpus**: Integrated multi-domain training suite across Olympiad Math, Python Algorithms, Formal Logic, Tool Calling, and IFEval in `artifacts/deep_distill_5000.jsonl`.
