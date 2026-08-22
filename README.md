@@ -85,8 +85,8 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
 | Checkpoint Role | Baseline Unquantized (BF16) | Kearuga Optimized Checkpoint | Size Reduction | KL Divergence ($D_{\text{KL}}$) | Cosine Similarity |
 |---|---|---|---:|---:|---:|
-| **Target Model (27B)** | `Qwen/Qwen3.8-27B` (54.2 GiB) | **`Qwen3.8-27B-Kearuga-NVFP4` (31.37 GiB)** | **-42.1%** | **0.038** (Lossless) | **0.9919** |
-| **Draft Model (5-Layer)** | `z-lab/Qwen3.8-27B-DFlash2` (3.67 GiB, BF16) | *(in active development)* | — | — | — |
+| **Target Model (27B)** | `Qwen/Qwen3.8-27B` (51.8 GiB) | **`Qwen3.8-27B-Kearuga-NVFP4` (20.4 GiB)** | **-60.5%** | **0.038** (Lossless) | **0.9919** |
+| **Draft Model (5-Layer)** | `z-lab/Qwen3.8-27B-DFlash2` (3.58 GiB, BF16) | *(in active development)* | — | — | — |
 
 ---
 
@@ -100,9 +100,9 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 | 📜 **Shared Target KV Pool** | `1,048,576` tokens | Four simultaneous 262K requests without memory exhaustion |
 | 👥 **Admitted Concurrency** | `4` (DFlash) / `32` (EAGLE) | Governs maximum active parallel decode graphs |
 | 💾 **Target KV Allocation** | `32.0 GiB` | Allocated in FP8 KV (`fp8_e4m3`) |
-| ⚡ **Target Weight Footprint** | `31.37 GiB` | ModelOpt NVFP4 (all 2,194 tensors, 3 shards) |
-| 🏎️ **Drafter Footprint** | `3.67 GiB` | BF16 (fused KV materialization active) |
-| 🛡️ **Total Serving VRAM** | **~67.0 GiB** | Fits with 61 GiB headroom on 128 GB Unified Memory |
+| ⚡ **Target Weight Footprint** | `20.4 GiB` | ModelOpt NVFP4 (all 2,194 tensors, 3 shards) |
+| 🏎️ **Drafter Footprint** | `3.58 GiB` | BF16 (fused KV materialization active) |
+| 🛡️ **Total Serving VRAM** | **~56 GiB** | Fits with ~72 GiB headroom on 128 GB Unified Memory |
 
 ---
 
@@ -115,8 +115,8 @@ See the complete release history in **[CHANGELOG.md](CHANGELOG.md)**.
 
 ### 2. Clone & Configure
 ```bash
-git clone https://github.com/0xWhiteMage/Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark.git
-cd Qwen3.8-27B-NVFP4-DFlash2-DGX-Spark
+git clone https://github.com/0xWhiteMage/Qwen3.8-27B-Kearuga-SGLang-DGX-Spark-DFlash2.git
+cd Qwen3.8-27B-Kearuga-SGLang-DGX-Spark-DFlash2
 cp .env.sample .env
 ```
 
