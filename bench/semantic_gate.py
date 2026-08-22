@@ -38,13 +38,13 @@ CANARIES = [
     },
 ]
 
-def chat(base_url: str, model: str, prompt: str, max_tokens: int = 128, reasoning_effort: str = "medium") -> dict:
+def chat(base_url: str, model: str, prompt: str, max_tokens: int = 128) -> dict:
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
         "max_tokens": max_tokens,
-        "chat_template_kwargs": {"reasoning_effort": reasoning_effort},
+        "chat_template_kwargs": {"enable_thinking": False},
     }
     req = urllib.request.Request(
         base_url.rstrip("/") + "/chat/completions",
